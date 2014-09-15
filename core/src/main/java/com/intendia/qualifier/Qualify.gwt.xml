@@ -1,0 +1,17 @@
+<module>
+	<inherits name="com.google.gwt.user.User"/>
+
+    <inherits name="javax.measure.Measure"/>
+
+	<inherits name="com.google.gwt.inject.Inject"/>
+	<inherits name="com.google.common.collect.Collect"/>
+    <inherits name="com.google.common.cache.Cache"/>
+
+    <!-- Specify the paths for translatable code -->
+	<source path="" excludes="rebind/**,processor/**"/>
+
+    <generate-with class="com.intendia.qualifier.rebind.StaticQualifierLoaderGenerator">
+        <when-type-is class="com.intendia.qualifier.StaticQualifierLoader"/>
+    </generate-with>
+
+</module>
