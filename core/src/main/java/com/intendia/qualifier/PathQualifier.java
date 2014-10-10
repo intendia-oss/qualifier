@@ -122,7 +122,7 @@ class PathQualifier<T, V, U> implements Qualifier<T, V> {
 
     @Override
     public Map<String, Object> getContext() {
-        throw new UnsupportedOperationException();
+        return child.getContext();
     }
 
     @Nullable
