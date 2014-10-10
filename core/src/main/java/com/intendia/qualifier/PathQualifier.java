@@ -16,7 +16,7 @@ import javax.measure.unit.Unit;
  * @param <V> the type of the destination value
  * @param <U> the type of the origin value
  */
-class PathQualifier<T, V, U> implements Qualifier<T, V> {
+class PathQualifier<T, V, U> implements PropertyQualifier<T, V> {
     private final Qualifier<T, U> parent;
     private final Qualifier<U, V> child;
 
@@ -42,8 +42,8 @@ class PathQualifier<T, V, U> implements Qualifier<T, V> {
 
     @Override
     @Nullable
-    public V get(T object) {
-        U value = parent.get(object);
+    public V get(T instance) {
+        U value = parent.get(instance);
         if (value == null) return null;
         return child.get(value);
     }

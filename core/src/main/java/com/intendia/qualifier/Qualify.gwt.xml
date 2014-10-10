@@ -2,6 +2,8 @@
 	<inherits name="com.google.gwt.user.User"/>
 
     <inherits name="javax.measure.Measure"/>
+    <!--<inherits name="com.intendia.igestion.server.i18n.I18n"/>-->
+    <!--<inherits name="com.intendia.igestion.client.util.Util"/>-->
 
 	<inherits name="com.google.gwt.inject.Inject"/>
 	<inherits name="com.google.common.collect.Collect"/>

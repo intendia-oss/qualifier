@@ -1,4 +1,4 @@
-// Copyright 2013 Intendia, SL.
+// Copyright 2014 Intendia, SL.
 package com.intendia.qualifier.processor;
 
 import static com.google.common.base.Objects.toStringHelper;
@@ -9,7 +9,6 @@ import static java.lang.String.format;
 
 import com.google.common.base.CaseFormat;
 import com.google.common.base.Joiner;
-import com.google.common.base.MoreObjects;
 import com.google.common.base.Predicate;
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
@@ -121,7 +120,7 @@ public class ReflectionHelper {
         return classRepresenter;
     }
 
-    /** Returns all fields ordered that are {@link Modifier#FINAL} or {@link Modifier#STATIC}. */
+    /** Returns all fields ordered that are {@link javax.lang.model.element.Modifier#FINAL} or {@link javax.lang.model.element.Modifier#STATIC}. */
     public Collection<VariableElement> getConstantFields() {
         return getModifierFields(Modifier.FINAL, Modifier.STATIC);
     }
@@ -405,7 +404,7 @@ public class ReflectionHelper {
 
         @Override
         public String toString() {
-            return MoreObjects.toStringHelper(this).add("name", name).add("getter", getter).add("setter", setter).toString();
+            return toStringHelper(this).add("name", name).add("getter", getter).add("setter", setter).toString();
         }
 
     }

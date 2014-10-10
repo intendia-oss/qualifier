@@ -1,22 +1,17 @@
-// Copyright 2013 Intendia, SL.
+// Copyright 2014 Intendia, SL.
 
 package com.intendia.stringify.processor;
 
-import static com.google.common.base.MoreObjects.ToStringHelper;
-import static com.google.common.base.MoreObjects.toStringHelper;
 import static com.google.common.base.Strings.emptyToNull;
 import static java.lang.String.format;
 import static java.util.EnumSet.of;
 import static javax.lang.model.SourceVersion.RELEASE_7;
-import static javax.lang.model.element.Modifier.FINAL;
-import static javax.lang.model.element.Modifier.PUBLIC;
-import static javax.lang.model.element.Modifier.STATIC;
-import static javax.tools.Diagnostic.Kind.ERROR;
-import static javax.tools.Diagnostic.Kind.NOTE;
-import static javax.tools.Diagnostic.Kind.WARNING;
+import static javax.lang.model.element.Modifier.*;
+import static javax.tools.Diagnostic.Kind.*;
 
 import com.google.common.base.CaseFormat;
 import com.google.common.base.Joiner;
+import com.google.common.base.Objects;
 import com.squareup.javawriter.JavaWriter;
 import java.io.Writer;
 import java.lang.annotation.Annotation;
@@ -24,11 +19,7 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import javax.annotation.processing.Filer;
-import javax.annotation.processing.ProcessingEnvironment;
-import javax.annotation.processing.RoundEnvironment;
-import javax.annotation.processing.SupportedAnnotationTypes;
-import javax.annotation.processing.SupportedSourceVersion;
+import javax.annotation.processing.*;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.TypeElement;
@@ -41,7 +32,7 @@ import javax.lang.model.util.Elements;
 @SupportedAnnotationTypes({
         "com.intendia.stringify.processor.Stringify"
 })
-public class StaticStringifierProcessor extends javax.annotation.processing.AbstractProcessor {
+public class StaticStringifierProcessor extends AbstractProcessor {
 
     private static Set<Element> processed = new HashSet<>();
 
@@ -118,7 +109,7 @@ public class StaticStringifierProcessor extends javax.annotation.processing.Abst
             final JavaWriter writer = new JavaWriter(sourceWriter);
             Collection<VariableElement> fields = getFields(classRepresenter);
 
-            ToStringHelper diagnostic = toStringHelper(qualifyName);
+            Objects.ToStringHelper diagnostic = Objects.toStringHelper(qualifyName);
 
             writer.emitPackage(getPackageName(classRepresenter));
 

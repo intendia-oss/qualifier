@@ -1,3 +1,4 @@
+// Copyright 2014 Intendia, SL.
 package com.intendia.qualifier.rebind;
 
 import com.google.common.collect.ImmutableList;
@@ -9,7 +10,6 @@ import com.google.gwt.core.ext.typeinfo.NotFoundException;
 import com.google.gwt.core.ext.typeinfo.TypeOracle;
 import com.google.gwt.user.rebind.ClassSourceFileComposerFactory;
 import com.google.gwt.user.rebind.SourceWriter;
-import com.intendia.qualifier.BeanQualifier;
 import com.intendia.qualifier.Qualifier;
 import java.io.PrintWriter;
 import java.util.List;

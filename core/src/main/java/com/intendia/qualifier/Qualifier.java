@@ -1,63 +1,108 @@
 // Copyright 2013 Intendia, SL.
 package com.intendia.qualifier;
 
-import com.google.common.base.Function;
-import com.google.gwt.cell.client.Cell;
-import com.google.gwt.text.shared.Renderer;
-import com.google.gwt.text.shared.SafeHtmlRenderer;
+import static com.google.common.base.MoreObjects.firstNonNull;
+import static com.intendia.qualifier.Qualifiers.UTIL_COMPARATOR;
+import static com.intendia.qualifier.ResourceProvider.ComparatorResourceProvider;
+
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.Map;
 import javax.annotation.Nullable;
-import javax.measure.quantity.Quantity;
-import javax.measure.unit.Unit;
 
-/**
- * @param <T> the type of the bean (a.k.a. qualified bean)
- * @param <V> the type of the value (a.k.a qualified property)
- */
-public interface Qualifier<T, V> extends Function<T, V> {
-    String getName();
+/** * Based on {@code javax.persistence.metamodel.ManagedType} and {@code java.beans.BeanInfo}. */
+public class Qualifier<T> {
+    public static <T> Qualifier<T> of (QualifierContext qualifierContext) {
+        return new Qualifier<>(qualifierContext);
+    }
+    private final QualifierContext qualifierContext;
 
-    String getPath();
-
-    Class<V> getType();
+    protected Qualifier(QualifierContext qualifierContext) {
+        this.qualifierContext = qualifierContext;
+    }
 
     /** Return the properties context of this qualifier. */
-    Map<String, Object> getContext();
+    public QualifierContext getContext() {
+        return qualifierContext;
+    }
 
-    // TODO Bean interface
-    @Nullable V get(T object);
-    Boolean isReadable();
+    public static final String CORE_NAME = "core.name";
 
-    void set(T object, V value);
-    Boolean isWritable();
+    public String getName() {
+        return getContext().getQualifier(CORE_NAME);
+    }
 
-    Comparator<? super T> getComparator();
+    public static final String CORE_PATH = "core.path";
 
-    /** Traverse a qualifier returning a new qualifier which has source type this and value type property. */
-    <ValueU> Qualifier<T, ValueU> as(Qualifier<V, ValueU> property);
+    public String getPath() {
+        return firstNonNull(getContext().<String> getQualifier(CORE_PATH), "");
+    }
 
-    // TODO I18n interface
-    /** The name of the property (e.g. 'User logo'). Defaults to the property or field name. */
-    @Deprecated String summary();
-    /** The abbreviation or acronym of the property (e.g. 'Logo'). Defaults to the property summary. */
-    @Deprecated @Nullable String abbreviation();
-    /** The description of the property (e.g. 'The user profile logo.'). Defaults to the property summary. */
-    @Deprecated @Nullable String description();
+    public static final String CORE_TYPE = "core.type";
 
+    public Class<T> getType() {
+        return getContext().getQualifier(CORE_TYPE);
+    }
 
-    // TODO Renderers interface
-    /** Default property renderer. Default implementation return a <code>toString</code> renderer. */
-    @Deprecated Renderer<V> getRenderer();
-    /** Default property cell. Default implementation return a simple <code>toString</code> cell implementation. */
-    @Deprecated SafeHtmlRenderer<V> getSafeHtmlRenderer();
-    /** Default property cell. Default implementation return a simple <code>toString</code> cell implementation. */
-    @Deprecated Cell<V> getCell();
+    public static final String CORE_SUPER = "core.super";
 
+    public Qualifier<? super T> getSuper() {
+        return getContext().getQualifier(CORE_SUPER);
+    }
 
-    // TODO Measure interface
-    /** The property unit of measure. Defaults to {@code ONE}. */
-    @Deprecated Unit<? extends Quantity> unit();
-    /** The property quantity type. Defaults to {@code javax.measure.quantity.Dimensionless}. */
-    @Deprecated Class<? extends Quantity> quantity();
+    public static final String CORE_PROPERTIES = "core.properties";
+
+    /** Return the property qualifiers of the bean qualifier. */
+    public Map<String, PropertyQualifier<T, ?>> getProperties() {
+        final Map<String, PropertyQualifier<T, ?>> properties = getContext().getQualifier(CORE_PROPERTIES);
+        return firstNonNull(properties, Collections.<String, PropertyQualifier<T, ?>> emptyMap());
+    }
+
+    public Comparator<? super T> getComparator() {
+        return getContext().getResourceProvider(ComparatorResourceProvider.class, UTIL_COMPARATOR).get(this);
+    }
+
+    @Override
+    public String toString() {
+        return getType() + "Metadata." + getPath();
+    }
+
+    public static class StaticQualifierContext implements QualifierContext {
+        public static StaticQualifierContext of(QualifierResolver resolver) {
+            return new StaticQualifierContext(resolver);
+        }
+
+        private final QualifierResolver resolver;
+
+        StaticQualifierContext(QualifierResolver resolver) {
+            this.resolver = resolver;
+        }
+
+        private QualifierManager getManager() {
+            throw new UnsupportedOperationException("QualifierManager is not accessible for static qualifiers");
+        }
+
+        protected @Nullable QualifierContext getParent() {
+            final Qualifier<?> resolve = (Qualifier<?>) resolver.resolve(CORE_SUPER);
+            return resolve == null ? null : resolve.getContext();
+        }
+
+        public @Nullable <T> T getQualifier(String extensionKey) {
+            Object resolvedValue = resolver.resolve(extensionKey);
+            if (resolvedValue != null) {
+                // noinspection unchecked
+                return (T) resolvedValue;
+            }
+            return getParent() == null ? null : getParent().<T> getQualifier(extensionKey);
+        }
+
+        @Override
+        public <T extends ResourceProvider<?>> T getResourceProvider(Class<T> resourceType, String extensionKey) {
+            return null; // return getManager().getResourceProvider(resourceType, extensionKey);
+        }
+    }
+
+    public interface QualifierResolver {
+        Object resolve(String extensionKey);
+    }
 }

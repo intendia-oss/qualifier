@@ -10,6 +10,6 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Target({ ElementType.TYPE, ElementType.METHOD, ElementType.FIELD })
 public @interface VisualizationColumnType {
-    /** (Required) The type of a column in a {@link AbstractDataTable}. */
+    /** (Required) The type of a column in a {@link com.google.gwt.visualization.client.AbstractDataTable}. */
     AbstractDataTable.ColumnType value();
 }

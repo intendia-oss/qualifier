@@ -1,23 +1,17 @@
-// Copyright 2013 Intendia, SL.
+// Copyright 2014 Intendia, SL.
 
 package com.intendia.qualifier.processor;
 
-import static com.google.common.base.MoreObjects.ToStringHelper;
 import static java.lang.String.format;
 import static java.util.EnumSet.of;
 import static javax.lang.model.SourceVersion.RELEASE_7;
 import static javax.lang.model.element.ElementKind.CLASS;
 import static javax.lang.model.element.ElementKind.INTERFACE;
-import static javax.lang.model.element.Modifier.ABSTRACT;
-import static javax.lang.model.element.Modifier.FINAL;
-import static javax.lang.model.element.Modifier.PRIVATE;
-import static javax.lang.model.element.Modifier.PUBLIC;
-import static javax.lang.model.element.Modifier.STATIC;
-import static javax.tools.Diagnostic.Kind.ERROR;
-import static javax.tools.Diagnostic.Kind.NOTE;
-import static javax.tools.Diagnostic.Kind.WARNING;
+import static javax.lang.model.element.Modifier.*;
+import static javax.tools.Diagnostic.Kind.*;
 
-import com.google.common.base.MoreObjects;
+import com.google.common.base.Objects;
+import com.google.common.base.Objects.ToStringHelper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.intendia.qualifier.annotation.SkipStaticQualifierMetamodelGenerator;
@@ -26,20 +20,10 @@ import com.squareup.javawriter.JavaWriter;
 import java.io.IOException;
 import java.io.Writer;
 import java.lang.annotation.Annotation;
-import java.util.Collection;
-import java.util.EnumSet;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
-import java.util.ServiceLoader;
-import java.util.Set;
+import java.util.*;
 import javax.annotation.Generated;
 import javax.annotation.Nullable;
-import javax.annotation.processing.Filer;
-import javax.annotation.processing.ProcessingEnvironment;
-import javax.annotation.processing.RoundEnvironment;
-import javax.annotation.processing.SupportedAnnotationTypes;
-import javax.annotation.processing.SupportedSourceVersion;
+import javax.annotation.processing.*;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
@@ -54,7 +38,7 @@ import javax.lang.model.util.Types;
         "com.intendia.qualifier.annotation.Qualify",
         "com.google.web.bindery.requestfactory.shared.ProxyFor"
 })
-public class StaticQualifierMetamodelProcessor extends javax.annotation.processing.AbstractProcessor {
+public class StaticQualifierMetamodelProcessor extends AbstractProcessor {
 
     private static final Collection<ElementKind> CLASS_OR_INTERFACE = EnumSet.of(CLASS, INTERFACE);
     private static final Set<String> RESERVED_PROPERTIES = ImmutableSet.of("getName", "getType", "get", "set",
@@ -153,7 +137,7 @@ public class StaticQualifierMetamodelProcessor extends javax.annotation.processi
             final JavaWriter writer = new JavaWriter(sourceWriter);
             final Iterable<? extends QualifierDescriptor> qualifiers = reflection.getPropertyDescriptors();
 
-            ToStringHelper diagnostic = MoreObjects.toStringHelper(qualifyName);
+            ToStringHelper diagnostic = Objects.toStringHelper(qualifyName);
 
             writer.emitPackage(reflection.getPackageName());
 
@@ -182,9 +166,7 @@ public class StaticQualifierMetamodelProcessor extends javax.annotation.processi
             writer.emitAnnotation(SuppressWarnings.class.getSimpleName(), "\"unused\"");
             writer.emitAnnotation(Generated.class.getSimpleName(), generatedValue);
             // public abstract class BeanClass extends BaseQualifier<> implements BeanQualifier<>
-            writer.beginType(qualifyName, "class", of(PUBLIC, ABSTRACT),
-                    qualifierBase(proxyClassName, proxyClassName), // extends
-                    format("BeanQualifier<%s>", proxyClassName)); // implements
+            writer.beginType(qualifyName, "class", of(PUBLIC, ABSTRACT), format("Qualifier<%s>", proxyClassName));
 
             // Private constructor
             writer.beginMethod(null, qualifyName, of(PRIVATE)).endMethod().emitEmptyLine();
@@ -221,8 +203,14 @@ public class StaticQualifierMetamodelProcessor extends javax.annotation.processi
 
     }
 
-    private void emitQualifier(JavaWriter writer, String beanName, String qualifyName, ToStringHelper diagnostic,
-            String proxyClassName, QualifierDescriptor property) throws IOException {
+    private void emitQualifier(
+            final JavaWriter writer,
+            final String beanName,
+            final String qualifyName,
+            final ToStringHelper diagnostic,
+            final String proxyClassName, // PersonAddress
+            final QualifierDescriptor property
+    ) throws IOException {
         final String propertyName = ReflectionHelper.toLower(property.getName());
         final String propertyType = writer.compressType(property.getType().toString());
         final String propertyClass = beanName + ReflectionHelper.toUpper(propertyName);
@@ -234,9 +222,9 @@ public class StaticQualifierMetamodelProcessor extends javax.annotation.processi
         final String type = isSelf
                 ? qualifierBean(proxyClassName, propertyType)
                 : qualifierType(proxyClassName, propertyType);
-        final String extendsType = isSelf ? qualifyName : qualifierBase(proxyClassName, propertyType);
+        final String extendsType = isSelf ? qualifyName : format("PropertyQualifier<%s,%s>", proxyClassName, propertyType);
 
-        // public static final Qualifier<Person,Address> address = new PersonAddress();
+        // public static final PersonAddress address = new PersonAddress();
         writer.emitField(propertyClass, propertyName, of(PUBLIC, STATIC, FINAL), format("new %s()", propertyClass));
 
         // public final static Person__ PersonMetadata = new PersonSelf();

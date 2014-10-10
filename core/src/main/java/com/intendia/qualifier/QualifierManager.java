@@ -4,6 +4,7 @@ package com.intendia.qualifier;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Strings.isNullOrEmpty;
+import static com.intendia.qualifier.ResourceProvider.HtmlRendererResourceProvider;
 
 import com.google.common.annotations.Beta;
 import com.google.common.base.Function;
@@ -11,7 +12,6 @@ import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.FluentIterable;
 import com.google.common.collect.Maps;
-import com.google.gwt.cell.client.Cell;
 import com.google.gwt.core.client.GWT;
 import com.google.gwt.text.shared.Renderer;
 import com.google.gwt.text.shared.SafeHtmlRenderer;
@@ -20,9 +20,12 @@ import com.google.inject.Singleton;
 import com.intendia.qualifier.ResourceProvider.CellRendererResourceProvider;
 import com.intendia.qualifier.ResourceProvider.HtmlRendererResourceProvider;
 import com.intendia.qualifier.ResourceProvider.TextRendererResourceProvider;
+import com.intendia.qualifier.extension.CellExtension;
+import com.intendia.qualifier.extension.I18nExtension;
 import java.util.Date;
 import java.util.Map;
 import java.util.Set;
+import javax.annotation.Nullable;
 import javax.inject.Provider;
 
 /**
@@ -34,85 +37,43 @@ import javax.inject.Provider;
 @Beta
 public interface QualifierManager {
 
-    /**
-     * Return the metamodel bean qualifier representing the bean.
-     * 
-     * @param cls the type of the represented bean or the type of the bean qualifier
-     * @throws IllegalArgumentException if not a qualified bean
-     */
-    public abstract <T> BeanQualifier<T> getBeanQualifier(Class<T> cls);
+    public abstract <T> Qualifier<T> getBeanQualifier(Class<T> cls);
 
-    /**
-     * Return the metamodel bean qualifiers.
-     */
-    public abstract Set<? extends BeanQualifier<?>> getBeanQualifiers();
+    public abstract Set<? extends Qualifier<?>> getBeanQualifiers();
 
-    /**
-     * Return the renderer associated with the name token. Used to generate plain text representations.
-     */
-    public abstract <T> Renderer<T> createRenderer(Qualifier<?, T> qualifier, String name);
+    <T, V> T getResource(Qualifier<V> qualifier, Class<T> type, String key);
 
-    /**
-     * Return the safe html renderer associated with the name token. Used to generate html representations.
-     */
-    public abstract <T> SafeHtmlRenderer<T> createSafeHtmlRenderer(Qualifier<?, T> qualifier, String name);
+    <T> ResourceProvider<T> getResourceProvider(Class<T> type, String key);
 
-    /**
-     * Return the cell associated with the name token. Used to generate cell representations.
-     */
-    public abstract <T> Cell<T> createCell(Qualifier<?, T> qualifier, String name);
+    <V, E extends Qualifier<V>> E asExtension(@Nullable Qualifier<V> qualifier, Class<E> extensionType);
 
     @Singleton
     static class StandardQualifierManager implements QualifierManager {
 
         protected static final StaticQualifierLoader STATIC_QUALIFIER_LOADER = GWT.create(StaticQualifierLoader.class);
         // TODO use ClassToInstanceMap
-        private final Map<Class<? extends BeanQualifier<?>>, BeanQualifier<?>> qualifierToInstance = Maps.newHashMap();
-        private final Map<Class<?>, Class<? extends BeanQualifier<?>>> beanToQualifier = Maps.newHashMap();
-
-        Supplier<Map<String, TextRendererResourceProvider>> textRenderers;
-        Supplier<Map<String, HtmlRendererResourceProvider>> htmlRenderers;
-        Supplier<Map<String, CellRendererResourceProvider>> cellRenderers;
+        private final Map<Class<? extends Qualifier>, Qualifier<?>> qualifierToInstance = Maps.newHashMap();
+        private final Map<Class<?>, Class<? extends Qualifier<?>>> beanToQualifier = Maps.newHashMap();
+        private Supplier<Set<ResourceProvider>> resourceProviders;
 
         StandardQualifierManager() {
             qualifierToInstance.putAll(STATIC_QUALIFIER_LOADER.getBeanQualifiers());
-            for (Class<? extends BeanQualifier<?>> qualifierClass : qualifierToInstance.keySet()) {
+            for (Class<? extends Qualifier<?>> qualifierClass : qualifierToInstance.keySet()) {
                 beanToQualifier.put(qualifierToInstance.get(qualifierClass).getType(), qualifierClass);
             }
         }
 
         @Inject
-        void inject(
-                final Provider<Map<String, TextRendererResourceProvider>> rendererMapProvider,
-                final Provider<Map<String, HtmlRendererResourceProvider>> safeHtmlRendererMapProvider,
-                final Provider<Map<String, CellRendererResourceProvider>> cellMapProvider) {
-            this.textRenderers = Suppliers.memoize(new Supplier<Map<String, TextRendererResourceProvider>>() {
+        void inject(final Provider<Set<ResourceProvider>> resourceProviders) {
+            this.resourceProviders = Suppliers.memoize(new Supplier<Set<ResourceProvider>>() {
                 @Override
-                public Map<String, TextRendererResourceProvider> get() {
-                    return rendererMapProvider.get();
-                }
-            });
-            this.htmlRenderers = Suppliers
-                    .memoize(new Supplier<Map<String, HtmlRendererResourceProvider>>() {
-                        @Override
-                        public Map<String, HtmlRendererResourceProvider> get() {
-                            return safeHtmlRendererMapProvider.get();
-                        }
-                    });
-            this.cellRenderers = Suppliers.memoize(new Supplier<Map<String, CellRendererResourceProvider>>() {
-                @Override
-                public Map<String, CellRendererResourceProvider> get() {
-                    return cellMapProvider.get();
+                public Set<ResourceProvider> get() {
+                    return resourceProviders.get();
                 }
             });
         }
 
-        /**
-         * Return the instance metamodel.
-         * 
-         * @param cls the type of the metamodel
-         */
-        public <Q extends BeanQualifier<?>> Q materialize(Class<Q> cls) {
+        public <Q extends Qualifier<?>> Q materialize(Class<Q> cls) {
             @SuppressWarnings("unchecked") final Q entityType = (Q) qualifierToInstance.get(cls);
             if (entityType == null) {
                 throw new IllegalArgumentException("Not a bean qualifier: " + cls);
@@ -121,57 +82,78 @@ public interface QualifierManager {
         }
 
         @Override
-        public Set<? extends BeanQualifier<?>> getBeanQualifiers() {
+        public Set<? extends Qualifier<?>> getBeanQualifiers() {
             return FluentIterable.from(beanToQualifier.values())
-                    .transform(new Function<Class<? extends BeanQualifier<?>>, BeanQualifier<?>>() {
+                    .transform(new Function<Class<? extends Qualifier<?>>, Qualifier<?>>() {
                         @Override
-                        public BeanQualifier<?> apply(Class<? extends BeanQualifier<?>> input) {
+                        public Qualifier<?> apply(Class<? extends Qualifier<?>> input) {
                             return qualifierToInstance.get(input);
                         }
                     }).toSet();
         }
-        
-        public <T extends ResourceProvider> T getResourceProvider(Class<T> type, String name) {
-            return checkNotNull(doGetResourceProvider(type, name),
-                    "Resource provider [type: %s, key: %s] not found", type, name);
-        }
-
-        @SuppressWarnings("unchecked")
-        public <T extends ResourceProvider> T doGetResourceProvider(Class<T> type, String name) {
-            if (TextRendererResourceProvider.class.equals(type)) return (T) textRenderers.get().get(name);
-            if (HtmlRendererResourceProvider.class.equals(type)) return (T) htmlRenderers.get().get(name);
-            if (CellRendererResourceProvider.class.equals(type)) return (T) cellRenderers.get().get(name);
-            return null;
-        }
 
         @Override
-        @SuppressWarnings("unchecked")
-        public <V> Renderer<V> createRenderer(Qualifier<?, V> qualifier, String name) {
-            return getResourceProvider(TextRendererResourceProvider.class, name).get(qualifier);
+        public <T, V> T getResource(Qualifier<V> qualifier, Class<T> type, String key) {
+            return getResourceProvider(type, key).get(qualifier);
+
         }
 
-        @Override
-        @SuppressWarnings("unchecked")
-        public <V> SafeHtmlRenderer<V> createSafeHtmlRenderer(Qualifier<?, V> qualifier, String name) {
-            if (isNullOrEmpty(name) && Date.class.equals(qualifier.getType())) {
-                return getResourceProvider(HtmlRendererResourceProvider.class,"date").get(qualifier);
+        private final Map<Class<?>, ResourceProvider<?>> typeToProviderCache = Maps.newHashMap();
+
+        public <T> ResourceProvider<T> getResourceProvider(Class<T> type, String key) {
+            if (!typeToProviderCache.containsKey(type)) {
+                for (ResourceProvider<?> resourceProvider : resourceProviders.get()) {
+                    if (resourceProvider.getResourceType().equals(type)) {
+                        typeToProviderCache.put(type, resourceProvider);
+                        break;
+                    }
+                    typeToProviderCache.put(type, null);
+                }
             }
-            return getResourceProvider(HtmlRendererResourceProvider.class, name).get(qualifier);
+
+            //noinspection unchecked
+            final ResourceProvider<T> reference = (ResourceProvider<T>) typeToProviderCache.get(type);
+
+            return checkNotNull(reference, "Resource provider [type: %s, key: %s] not found", type, key);
+        }
+
+//        private final Map<String, Object> resourceProviderCache = Maps.newHashMap();
+//
+//        @Override
+//        @SuppressWarnings("unchecked")
+//        public <T extends ResourceProvider> T getResourceProvider(Class<T> type, String key) {
+//            final String cacheKey = type + ":" + key;
+//            if (!resourceProviderCache.containsKey(cacheKey)) {
+//                for (ResourceProvider resourceProvider : resourceProviders.get()) {
+//                    if (!resourceProvider.getClass().equals(type)) continue;
+//                    if (!resourceProvider.getProviderKey().equals(key)) continue;
+//                    resourceProviderCache.put(cacheKey, resourceProvider);
+//                    break;
+//                }
+//                resourceProviderCache.put(cacheKey, null);
+//            }
+//
+//            return (T) checkNotNull(resourceProviderCache.get(cacheKey),
+//                    "Resource provider [type: %s, key: %s] not found", type, key);
+//        }
+
+
+
+        @Override
+        public <V, E extends Qualifier<V>> E asExtension(@Nullable Qualifier<V> qualifier, Class<E> extensionType) {
+            switch (extensionType.getSimpleName()) {//@formatter:off
+                case "CellExtension": return (E) new CellExtension.DefaultCellExtension(qualifier);
+                case "CellExtension": return (E) new I18nExtension.De(qualifier);
+            }
         }
 
         @Override
-        @SuppressWarnings("unchecked")
-        public <V> Cell<V> createCell(Qualifier<?, V> qualifier, String name) {
-            return getResourceProvider(CellRendererResourceProvider.class, name).get(qualifier);
-        }
-
-        @Override
-        public <T> BeanQualifier<T> getBeanQualifier(Class<T> cls) {
-            final Class<? extends BeanQualifier<?>> qualifier = beanToQualifier.get(cls);
+        public <T> Qualifier<T> getBeanQualifier(Class<T> cls) {
+            final Class<? extends Qualifier<?>> qualifier = beanToQualifier.get(cls);
             checkArgument(qualifier != null, "Not a qualified class: " + cls);
-            final BeanQualifier<?> materialize = materialize(qualifier);
+            final Qualifier<?> materialize = materialize(qualifier);
             @SuppressWarnings({ "ConstantConditions", "unchecked", "UnnecessaryLocalVariable" })//
-            final BeanQualifier<T> beanQualifier = (BeanQualifier<T>) materialize;
+            final Qualifier<T> beanQualifier = (Qualifier<T>) materialize;
             return beanQualifier;
         }
     }

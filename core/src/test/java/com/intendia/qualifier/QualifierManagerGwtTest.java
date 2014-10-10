@@ -1,7 +1,7 @@
 package com.intendia.qualifier;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.intendia.qualifier.QualifierModule.getTextRendererMapBinder;
+import static com.intendia.qualifier.QualifierModule.getResourceProviderBinder;
 
 import com.google.gwt.core.client.GWT;
 import com.google.gwt.inject.client.AbstractGinModule;
@@ -25,13 +25,17 @@ public class QualifierManagerGwtTest extends GWTTestCase {
         @Override
         protected void configure() {
             install(new QualifierModule());
-            final GinMapBinder<String, TextRendererResourceProvider> mapBinder = getTextRendererMapBinder(binder());
+            final GinMapBinder<String, TextRendererResourceProvider> mapBinder = getResourceProviderBinder(binder());
             mapBinder.addBinding("simple").to(SimpleTextRendererProvider.class);
             mapBinder.addBinding("myRenderer").to(MyTextRendererProvider.class);
         }
 
         static class SimpleTextRendererProvider extends ResourceProvider.AbstractResourceProvider
                 implements TextRendererResourceProvider {
+            SimpleTextRendererProvider() {
+                super(providerKey);
+            }
+
             @Override
             public <T> Renderer<T> get(Qualifier<?, T> qualifier) {
                 return new AbstractRenderer<T>() {
@@ -45,6 +49,10 @@ public class QualifierManagerGwtTest extends GWTTestCase {
 
         static class MyTextRendererProvider extends ResourceProvider.AbstractResourceProvider
                 implements TextRendererResourceProvider {
+            MyTextRendererProvider() {
+                super(providerKey);
+            }
+
             @Override
             @SuppressWarnings("unchecked")
             public <T> Renderer<T> get(Qualifier<?, T> qualifier) {

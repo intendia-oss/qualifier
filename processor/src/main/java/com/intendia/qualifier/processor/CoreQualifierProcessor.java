@@ -9,6 +9,7 @@ import com.google.common.collect.FluentIterable;
 import com.google.common.collect.ImmutableList;
 import com.intendia.qualifier.annotation.Qualify;
 import com.intendia.qualifier.annotation.QualifyExtension;
+import com.intendia.qualifier.extension.RendererExtension;
 import java.util.Collection;
 import java.util.List;
 import javax.lang.model.element.*;
@@ -40,8 +41,8 @@ public class CoreQualifierProcessor extends AbstractQualifierProcessorExtension
         qCtx.putIfNotNull(I18N_DESCRIPTION, ctx.getAnnotation().description());
         qCtx.putIfNotNull(I18N_ABBREVIATION, ctx.getAnnotation().abbreviation());
         // Gwt representer
-        qCtx.putIfNotNull(REPRESENTER_TEXT_RENDERER, ctx.getAnnotation().renderer());
-        qCtx.putIfNotNull(REPRESENTER_HTML_RENDERER, ctx.getAnnotation().safeHtmlRenderer());
+        qCtx.putIfNotNull(RendererExtension.TEXT_RENDERER, ctx.getAnnotation().renderer());
+        qCtx.putIfNotNull(RendererExtension.HTML_RENDERER, ctx.getAnnotation().safeHtmlRenderer());
         qCtx.putIfNotNull(REPRESENTER_CELL, ctx.getAnnotation().cell());
         // Measure
         qCtx.putIfNotNull(MEASURE_UNIT_OF_MEASURE, ctx.getAnnotation().unitOfMeasure());
