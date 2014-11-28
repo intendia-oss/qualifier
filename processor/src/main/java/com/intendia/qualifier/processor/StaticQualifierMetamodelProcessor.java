@@ -5,7 +5,6 @@ package com.intendia.qualifier.processor;
 import static com.google.common.base.MoreObjects.ToStringHelper;
 import static java.lang.String.format;
 import static java.util.EnumSet.of;
-import static javax.lang.model.SourceVersion.RELEASE_7;
 import static javax.lang.model.element.ElementKind.CLASS;
 import static javax.lang.model.element.ElementKind.INTERFACE;
 import static javax.lang.model.element.Modifier.ABSTRACT;
@@ -20,6 +19,8 @@ import static javax.tools.Diagnostic.Kind.WARNING;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import com.google.web.bindery.requestfactory.shared.ProxyFor;
+import com.intendia.qualifier.annotation.Qualify;
 import com.intendia.qualifier.annotation.SkipStaticQualifierMetamodelGenerator;
 import com.intendia.qualifier.processor.ReflectionHelper.QualifyExtensionData;
 import com.squareup.javawriter.JavaWriter;
@@ -35,11 +36,11 @@ import java.util.ServiceLoader;
 import java.util.Set;
 import javax.annotation.Generated;
 import javax.annotation.Nullable;
+import javax.annotation.processing.AbstractProcessor;
 import javax.annotation.processing.Filer;
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.annotation.processing.RoundEnvironment;
-import javax.annotation.processing.SupportedAnnotationTypes;
-import javax.annotation.processing.SupportedSourceVersion;
+import javax.lang.model.SourceVersion;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
@@ -49,12 +50,7 @@ import javax.lang.model.util.Elements;
 import javax.lang.model.util.Types;
 
 /** Static Qualifier Metamodel Processor. */
-@SupportedSourceVersion(RELEASE_7)
-@SupportedAnnotationTypes({
-        "com.intendia.qualifier.annotation.Qualify",
-        "com.google.web.bindery.requestfactory.shared.ProxyFor"
-})
-public class StaticQualifierMetamodelProcessor extends javax.annotation.processing.AbstractProcessor {
+public class StaticQualifierMetamodelProcessor extends AbstractProcessor {
 
     private static final Collection<ElementKind> CLASS_OR_INTERFACE = EnumSet.of(CLASS, INTERFACE);
     private static final Set<String> RESERVED_PROPERTIES = ImmutableSet.of("getName", "getType", "get", "set",
@@ -64,6 +60,16 @@ public class StaticQualifierMetamodelProcessor extends javax.annotation.processi
     private ProcessingEnvironment environment;
     private DeclaredType declaredType;
     private List<QualifierProcessorExtension> processorExtensions;
+
+    @Override
+    public SourceVersion getSupportedSourceVersion() {
+        return SourceVersion.latestSupported();
+    }
+
+    @Override
+    public Set<String> getSupportedAnnotationTypes() {
+        return ImmutableSet.of(Qualify.class.getName(), ProxyFor.class.getName());
+    }
 
     public List<QualifierProcessorExtension> getProcessorExtensions() {
         if (processorExtensions == null) processorExtensions = loadExtensions();
