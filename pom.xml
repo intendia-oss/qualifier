@@ -2,7 +2,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.intendia.qualifier</groupId>
     <artifactId>qualifier-parent</artifactId>
-    <version>0.3-SNAPSHOT</version>
+    <version>0.3</version>
     <name>Qualifier (Parent)</name>
     <packaging>pom</packaging>
 
@@ -181,6 +181,11 @@
                 <artifactId>compile-testing</artifactId>
                 <version>0.4</version>
             </dependency>
+            <dependency>
+                <groupId>junit</groupId>
+                <artifactId>junit</artifactId>
+                <version>4.11</version>
+            </dependency>
         </dependencies>
     </dependencyManagement>
 
@@ -197,17 +202,6 @@
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-compiler-plugin</artifactId>
                     <version>3.1</version>
-                    <configuration>
-                        <proc>none</proc>
-                    </configuration>
-                </plugin>
-                <plugin>
-                    <groupId>org.bsc.maven</groupId>
-                    <artifactId>maven-processor-plugin</artifactId>
-                    <version>2.2.4</version>
-                    <configuration>
-                        <encoding>${project.build.sourceEncoding}</encoding>
-                    </configuration>
                 </plugin>
                 <plugin>
                     <groupId>org.codehaus.mojo</groupId>

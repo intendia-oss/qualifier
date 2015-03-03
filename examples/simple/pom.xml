@@ -1,12 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <parent>
-        <groupId>com.intendia.qualifier</groupId>
         <artifactId>qualifier-examples</artifactId>
+        <groupId>com.intendia.qualifier</groupId>
         <version>0.3</version>
+        <relativePath>../pom.xml</relativePath>
     </parent>
     <modelVersion>4.0.0</modelVersion>
-    <artifactId>qualifier-gwt-example</artifactId>
-    <name>Qualifier :: GWT Example</name>
+    <artifactId>qualifier-simple-example</artifactId>
+    <name>Qualifier :: Simple Example</name>
+
     <dependencies>
         <dependency>
             <groupId>com.intendia.qualifier</groupId>
@@ -19,14 +22,14 @@
             <scope>provided</scope>
         </dependency>
         <dependency>
-            <groupId>com.google.gwt</groupId>
-            <artifactId>gwt-user</artifactId>
-            <scope>provided</scope>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <scope>test</scope>
         </dependency>
     </dependencies>
+
     <build>
         <plugins>
-            <!-- Copy the generated classes -->
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>build-helper-maven-plugin</artifactId>
