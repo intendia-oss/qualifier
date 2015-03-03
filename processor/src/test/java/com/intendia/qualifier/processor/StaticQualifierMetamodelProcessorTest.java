@@ -26,5 +26,4 @@ public class StaticQualifierMetamodelProcessorTest {
         ASSERT.about(javaSource()).that(sourceFile).processedWith(qualifierProcessors()).compilesWithoutError();
         //.and().generatesSources(expectedStaticQualifier);
     }
-
 }

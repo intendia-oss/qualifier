@@ -39,6 +39,7 @@ import javax.annotation.Nullable;
 import javax.annotation.processing.AbstractProcessor;
 import javax.annotation.processing.Filer;
 import javax.annotation.processing.ProcessingEnvironment;
+import javax.annotation.processing.Processor;
 import javax.annotation.processing.RoundEnvironment;
 import javax.lang.model.SourceVersion;
 import javax.lang.model.element.Element;
@@ -50,7 +51,7 @@ import javax.lang.model.util.Elements;
 import javax.lang.model.util.Types;
 
 /** Static Qualifier Metamodel Processor. */
-public class StaticQualifierMetamodelProcessor extends AbstractProcessor {
+public class StaticQualifierMetamodelProcessor extends AbstractProcessor implements Processor {
 
     private static final Collection<ElementKind> CLASS_OR_INTERFACE = EnumSet.of(CLASS, INTERFACE);
     private static final Set<String> RESERVED_PROPERTIES = ImmutableSet.of("getName", "getType", "get", "set",
@@ -63,20 +64,30 @@ public class StaticQualifierMetamodelProcessor extends AbstractProcessor {
 
     @Override
     public SourceVersion getSupportedSourceVersion() {
+        System.out.println("source version");
         return SourceVersion.latestSupported();
     }
 
     @Override
     public Set<String> getSupportedAnnotationTypes() {
-        return ImmutableSet.of(Qualify.class.getName(), ProxyFor.class.getName());
+        final ImmutableSet<String> supported = ImmutableSet.of(Qualify.class.getName(), ProxyFor.class.getName());
+        System.out.println("supported annotation types: " + supported);
+        return supported;
     }
 
     public List<QualifierProcessorExtension> getProcessorExtensions() {
-        if (processorExtensions == null) processorExtensions = loadExtensions();
+        if (processorExtensions == null) {
+            System.out.println("loading extensions...");
+            final List<QualifierProcessorExtension> extensions = loadExtensions();
+            for (QualifierProcessorExtension extension : extensions) {
+                extension.init(processingEnv);
+            }
+            processorExtensions = extensions;
+        }
         return this.processorExtensions;
     }
 
-    public ImmutableList<QualifierProcessorExtension> loadExtensions() {
+    public List<QualifierProcessorExtension> loadExtensions() {
         final ServiceLoader<QualifierProcessorExtension> loader = ServiceLoader
                 .load(QualifierProcessorExtension.class, getClass().getClassLoader());
 
@@ -88,22 +99,28 @@ public class StaticQualifierMetamodelProcessor extends AbstractProcessor {
         final Iterator<QualifierProcessorExtension> iterator = loader.iterator();
         for (;;) {
             try {
-                if (iterator.hasNext()) builder.add(iterator.next());
+                if (iterator.hasNext()) {
+                    final QualifierProcessorExtension next = iterator.next();
+                    System.out.println("loading " + next);
+                    builder.add(next);
+                }
                 else break;
             } catch (Throwable exception) {
+                System.out.println("error loading extension: " + exception);
                 printWarning("Error loading extensions: " + exception);
             }
         }
-        return builder.build();
+
+        ImmutableList<QualifierProcessorExtension> build = builder.build();
+        System.out.println("loaded " + build);
+        return build;
     }
 
     @Override
     public synchronized void init(ProcessingEnvironment environment) {
         super.init(environment);
+        System.out.println("init");
         this.environment = environment;
-        for (QualifierProcessorExtension extension : getProcessorExtensions()) {
-            extension.init(processingEnv);
-        }
     }
 
     public ProcessingEnvironment getEnvironment() {
@@ -113,31 +130,32 @@ public class StaticQualifierMetamodelProcessor extends AbstractProcessor {
     @Override
     @SuppressWarnings("unchecked")
     public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnvironment) {
-        if (!roundEnvironment.processingOver()) {
-            printMessage(getClass().getName() + " started.");
-            for (String supportedAnnotationName : getSupportedAnnotationTypes()) {
-                printMessage("Searching for " + supportedAnnotationName + " annotations.");
-                try {
-                    Class<?> supportedAnnotationClass = Class.forName(supportedAnnotationName);
-                    if (supportedAnnotationClass.isAnnotation()) {
-                        for (Element annotatedElement : roundEnvironment
-                                .getElementsAnnotatedWith((Class<? extends Annotation>) supportedAnnotationClass)) {
-                            printMessage("Found " + annotatedElement.toString() + ".");
-                            try {
-                                this.process(annotatedElement);
-                            } catch (Exception exception) {
-                                final String message = "Error processing " + annotatedElement + ": " + exception;
-                                getEnvironment().getMessager().printMessage(ERROR, message, annotatedElement);
-                                exception.printStackTrace();
-                            }
+        System.out.println("processing round: " + roundEnvironment);
+        System.out.println("processing over: " + roundEnvironment.processingOver());
+        printMessage(getClass().getName() + " started.");
+        for (String supportedAnnotationName : getSupportedAnnotationTypes()) {
+            printMessage("Searching for " + supportedAnnotationName + " annotations.");
+            System.out.println("Searching for " + supportedAnnotationName + " annotations.");
+            try {
+                Class<?> supportedAnnotationClass = Class.forName(supportedAnnotationName);
+                if (supportedAnnotationClass.isAnnotation()) {
+                    for (Element annotatedElement : roundEnvironment
+                            .getElementsAnnotatedWith((Class<? extends Annotation>) supportedAnnotationClass)) {
+                        printMessage("Found " + annotatedElement.toString() + ".");
+                        try {
+                            this.process(annotatedElement);
+                        } catch (Exception exception) {
+                            final String message = "Error processing " + annotatedElement + ": " + exception;
+                            getEnvironment().getMessager().printMessage(ERROR, message, annotatedElement);
+                            exception.printStackTrace();
                         }
                     }
-                } catch (ClassNotFoundException e) {
-                    printError("Annotation not found: " + supportedAnnotationName);
                 }
+            } catch (ClassNotFoundException e) {
+                printError("Annotation not found: " + supportedAnnotationName);
             }
-            printMessage(getClass().getName() + " finished.");
         }
+        printMessage(getClass().getName() + " finished.");
         return true;
     }
 
@@ -350,7 +368,7 @@ public class StaticQualifierMetamodelProcessor extends AbstractProcessor {
         // Property context
         StringBuilder sb = new StringBuilder();
         for (QualifyExtensionData extension : property.getExtensions()) { // add extensions
-            sb.append(String.format(".put(\"%s\", %s)", extension.getKey(), extension.toCastValue()));
+            sb.append(String.format("\n.put(\"%s\", %s)", extension.getKey(), extension.toCastValue()));
         }
 
         writer.emitAnnotation(Override.class)

@@ -15,7 +15,6 @@ import javax.annotation.processing.ProcessingEnvironment;
 import javax.lang.model.type.MirroredTypeException;
 
 public abstract class AbstractQualifierProcessorExtension implements QualifierProcessorExtension {
-
     private ProcessingEnvironment processingEnv;
     private boolean initialized = false;
     private List<TypedQualifierAnnotationAnalyzerDecorator<?>> annotationAnalyzers;

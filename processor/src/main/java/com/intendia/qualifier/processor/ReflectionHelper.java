@@ -10,6 +10,7 @@ import static java.lang.String.format;
 import com.google.common.base.CaseFormat;
 import com.google.common.base.Joiner;
 import com.google.common.base.MoreObjects;
+import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
@@ -436,6 +437,9 @@ public class ReflectionHelper {
         }
 
         public static QualifyExtensionData of(String key, TypeMirror type, Object value) {
+            Preconditions.checkNotNull(key, "requires non null keys");
+            Preconditions.checkNotNull(value, "requires non null values");
+            Preconditions.checkArgument(!(value instanceof QualifyExtensionData), "please, be careful!");
             return new QualifyExtensionData(key, type, value);
         }
 
@@ -464,13 +468,13 @@ public class ReflectionHelper {
         }
 
         public String toCastValue() {
-            if (type.toString().equals("java.lang.Class")) {
-                return (String) value;
-            } else if (type.toString().equals("java.lang.String")) {
-                return "\"" + value + "\"";
-            } else {
-                return type.toString() + ".valueOf(\"" + value + "\")";
-            }
+            final String typeString = Splitter.on('<').split(type.toString()).iterator().next();
+            switch (typeString) { //@formatter:off
+                case "java.lang.Class": return value + ".class";
+                case "java.lang.String": return "\"" + value + "\"";
+                case "java.lang.Integer": return value.toString();
+                default: return typeString + ".valueOf(\"" + value + "\")";
+            } //@formatter:on
         }
 
         public TypeMirror getType() {

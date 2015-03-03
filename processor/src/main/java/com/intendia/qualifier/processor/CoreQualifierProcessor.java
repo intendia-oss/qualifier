@@ -61,7 +61,7 @@ public class CoreQualifierProcessor extends AbstractQualifierProcessorExtension
     public void addQualifyExtension(QualifierContext context, Element annotatedElement,
             AnnotationMirror annotationMirror, QualifyExtension qualifyExtension) {
         final QualifyExtensionData qualifyExtensionData = QualifyExtensionData.of(qualifyExtension);
-        context.putIfNotNull(qualifyExtension.key(), qualifyExtensionData);
+        context.put(qualifyExtensionData);
 
         final TypeElement type = getProcessingEnv().getElementUtils()
                 .getTypeElement(qualifyExtensionData.getType().toString());

@@ -42,14 +42,11 @@ public class QualifierContext {
     }
 
     public void putIfNotNull(String key, Object value) {
-        // TODO notify the key has been overridden
-        // Preconditions.checkArgument(!data.containsKey(key), "duplicate key " + key);
-        if (value == null || isEmpty(value)) return;
-
-        doPut(key, value);
+        Preconditions.checkArgument(!(value instanceof QualifyExtensionData), "use specific method instead!");
+        if (value != null && !isEmpty(value)) doPut(key, value);
     }
 
-    /** Recommended convention to add unique values for a type (ex. {@code putIfNotNull(RoundingMode.class, UP)})*/
+    /** Recommended convention to add unique values for a type (ex. {@code putIfNotNull(RoundingMode.class, UP)}) */
     public <T> void putIfNotNull(Class<T> type, T value) {
         putIfNotNull(type.getName(), value);
     }
@@ -59,11 +56,11 @@ public class QualifierContext {
     }
 
     private void doPut(String key, Object value) {
-        Preconditions.checkNotNull(key, "requires non null keys");
-        Preconditions.checkNotNull(value, "requires non null values");
-        data.put(key, value instanceof QualifyExtensionData
-                ? (QualifyExtensionData) value
-                : QualifyExtensionData.of(key, helper.getTypeMirror(value.getClass()), value));
+        put(QualifyExtensionData.of(key, helper.getTypeMirror(value.getClass()), value));
+    }
+
+    public QualifyExtensionData put(QualifyExtensionData extensionData) {
+        return data.put(extensionData.getKey(), extensionData);
     }
 
     private boolean isEmpty(Object value) {
