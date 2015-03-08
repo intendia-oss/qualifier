@@ -13,4 +13,7 @@ import java.util.concurrent.TimeUnit;
 public interface SimpleModel {
     @Simple(getString = "s", getType = String.class, getInteger = 1)
     public String getSimpleValue();
+
+    @Qualify
+    static class SimpleInner{}
 }

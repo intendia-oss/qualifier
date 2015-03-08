@@ -115,7 +115,15 @@ public class ReflectionHelper {
 
     /** Returns the class name. (ex. {@code com.gwtplatform.dispatch.shared.annotation.Foo}) */
     public String getClassName() {
-        return Joiner.on('.').skipNulls().join(emptyToNull(getPackageName()), getSimpleClassName());
+        return classRepresenter.getQualifiedName().toString();
+    }
+
+    public String getFlatName() {
+        if (classRepresenter.getNestingKind() == NestingKind.MEMBER) {
+            return classRepresenter.getEnclosingElement() + "$" + getSimpleClassName();
+        }  else {
+            return getClassName();
+        }
     }
 
     public TypeElement getClassRepresenter() {

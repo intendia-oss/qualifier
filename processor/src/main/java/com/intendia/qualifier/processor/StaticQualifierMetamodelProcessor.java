@@ -170,7 +170,7 @@ public class StaticQualifierMetamodelProcessor extends AbstractProcessor impleme
 
         // 'Class' refer full qualified name, 'Name' refer to simple class name
         final String beanName = reflection.getSimpleClassName();
-        final String qualifyName = reflection.getClassName() + "__";
+        final String qualifyName = reflection.getFlatName() + "__";
 
         Filer filer = getEnvironment().getFiler();
         try (Writer sourceWriter = filer.createSourceFile(qualifyName, proxyElement).openWriter()) {
