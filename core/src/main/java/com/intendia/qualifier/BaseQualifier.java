@@ -1,7 +1,9 @@
 // Copyright 2013 Intendia, SL.
 package com.intendia.qualifier;
 
-import static com.google.common.collect.Ordering.*;
+import static com.google.common.collect.Ordering.from;
+import static com.google.common.collect.Ordering.natural;
+import static com.google.common.collect.Ordering.usingToString;
 
 import com.google.common.collect.Ordering;
 import com.google.gwt.cell.client.Cell;
@@ -131,7 +133,7 @@ public abstract class BaseQualifier<T, V> implements Qualifier<T, V> {
     }
 
     @Override
-    public <U> Qualifier<T, U> as(final Qualifier<V, U> property) {
+    public <U> Qualifier<T, U> as(final Qualifier<? super V, U> property) {
         return new PathQualifier<>(this, property);
     }
 

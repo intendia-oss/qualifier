@@ -93,7 +93,7 @@ public abstract class ForwardingQualifier<T, V>
     }
 
     @Override
-    public <U> Qualifier<T, U> as(Qualifier<V, U> property) {
+    public <U> Qualifier<T, U> as(Qualifier<? super V, U> property) {
         return delegate().as(property);
     }
 

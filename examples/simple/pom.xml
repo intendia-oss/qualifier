@@ -31,19 +31,17 @@
     <build>
         <plugins>
             <plugin>
-                <groupId>org.codehaus.mojo</groupId>
-                <artifactId>build-helper-maven-plugin</artifactId>
+                <artifactId>maven-compiler-plugin</artifactId>
                 <executions>
                     <execution>
-                        <id>add-source</id>
+                        <id>extensions</id>
                         <phase>generate-sources</phase>
                         <goals>
-                            <goal>add-source</goal>
+                            <goal>compile</goal>
                         </goals>
                         <configuration>
-                            <sources>
-                                <source>${project.build.directory}/generated-sources/apt</source>
-                            </sources>
+                            <proc>none</proc>
+                            <failOnError>false</failOnError>
                         </configuration>
                     </execution>
                 </executions>

@@ -18,9 +18,9 @@ import javax.measure.unit.Unit;
  */
 class PathQualifier<T, V, U> implements Qualifier<T, V> {
     private final Qualifier<T, U> parent;
-    private final Qualifier<U, V> child;
+    private final Qualifier<? super U, V> child;
 
-    public PathQualifier(Qualifier<T, U> parent, Qualifier<U, V> child) {
+    public PathQualifier(Qualifier<T, U> parent, Qualifier<? super U, V> child) {
         this.parent = parent;
         this.child = child;
     }
@@ -116,7 +116,7 @@ class PathQualifier<T, V, U> implements Qualifier<T, V> {
     }
 
     @Override
-    public <ValueV> Qualifier<T, ValueV> as(Qualifier<V, ValueV> property) {
+    public <ValueV> Qualifier<T, ValueV> as(Qualifier<? super V, ValueV> property) {
         return new PathQualifier<>(this, property);
     }
 

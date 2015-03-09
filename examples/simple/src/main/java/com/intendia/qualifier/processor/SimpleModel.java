@@ -2,6 +2,7 @@ package com.intendia.qualifier.processor;
 
 import com.intendia.qualifier.annotation.Qualify;
 import com.intendia.qualifier.annotation.QualifyExtension;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 @Qualify(extend = {
@@ -11,9 +12,22 @@ import java.util.concurrent.TimeUnit;
         @QualifyExtension(key = "extension.class", type = Class.class, value = "java.lang.String"),
 })
 public interface SimpleModel {
-    @Simple(getString = "s", getType = String.class, getInteger = 1)
+    @Simple(getString = "s", getType = SimpleInnerInterface.class, getInteger = 1)
     public String getSimpleValue();
 
     @Qualify
-    static class SimpleInner{}
+    static class SimpleInner {
+    }
+
+    @Qualify
+    @Simple(getString = "s", getType = SimpleInnerInterface.class, getInteger = 1)
+    interface SimpleDependant extends com.google.common.base.Predicate<SimpleInnerInterface> {
+    }
+
+    @Qualify
+    interface SimpleInnerInterface {
+        public List<String> getVehicleParam();
+
+        public void setVehicleParam(List<String> vehicleParam);
+    }
 }

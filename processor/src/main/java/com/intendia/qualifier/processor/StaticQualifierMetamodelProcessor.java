@@ -3,6 +3,7 @@
 package com.intendia.qualifier.processor;
 
 import static com.google.common.base.MoreObjects.ToStringHelper;
+import static com.google.common.base.Throwables.getStackTraceAsString;
 import static java.lang.String.format;
 import static java.util.EnumSet.of;
 import static javax.lang.model.element.ElementKind.CLASS;
@@ -14,19 +15,19 @@ import static javax.lang.model.element.Modifier.PUBLIC;
 import static javax.lang.model.element.Modifier.STATIC;
 import static javax.tools.Diagnostic.Kind.ERROR;
 import static javax.tools.Diagnostic.Kind.NOTE;
+import static javax.tools.Diagnostic.Kind.OTHER;
 import static javax.tools.Diagnostic.Kind.WARNING;
 
 import com.google.common.base.MoreObjects;
+import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
-import com.google.web.bindery.requestfactory.shared.ProxyFor;
 import com.intendia.qualifier.annotation.Qualify;
 import com.intendia.qualifier.annotation.SkipStaticQualifierMetamodelGenerator;
 import com.intendia.qualifier.processor.ReflectionHelper.QualifyExtensionData;
 import com.squareup.javawriter.JavaWriter;
 import java.io.IOException;
 import java.io.Writer;
-import java.lang.annotation.Annotation;
 import java.util.Collection;
 import java.util.EnumSet;
 import java.util.HashSet;
@@ -38,7 +39,6 @@ import javax.annotation.Generated;
 import javax.annotation.Nullable;
 import javax.annotation.processing.AbstractProcessor;
 import javax.annotation.processing.Filer;
-import javax.annotation.processing.ProcessingEnvironment;
 import javax.annotation.processing.Processor;
 import javax.annotation.processing.RoundEnvironment;
 import javax.lang.model.SourceVersion;
@@ -58,105 +58,43 @@ public class StaticQualifierMetamodelProcessor extends AbstractProcessor impleme
             "comparator", "summary", "abbreviation", "description", "unit", "quantity", "as");
     private static Set<Element> processed = new HashSet<>();
 
-    private ProcessingEnvironment environment;
     private DeclaredType declaredType;
     private List<QualifierProcessorExtension> processorExtensions;
+    private @Nullable Element element;
 
     @Override
     public SourceVersion getSupportedSourceVersion() {
-        System.out.println("source version");
         return SourceVersion.latestSupported();
     }
 
     @Override
     public Set<String> getSupportedAnnotationTypes() {
-        final ImmutableSet<String> supported = ImmutableSet.of(Qualify.class.getName(), ProxyFor.class.getName());
-        System.out.println("supported annotation types: " + supported);
-        return supported;
-    }
-
-    public List<QualifierProcessorExtension> getProcessorExtensions() {
-        if (processorExtensions == null) {
-            System.out.println("loading extensions...");
-            final List<QualifierProcessorExtension> extensions = loadExtensions();
-            for (QualifierProcessorExtension extension : extensions) {
-                extension.init(processingEnv);
-            }
-            processorExtensions = extensions;
-        }
-        return this.processorExtensions;
-    }
-
-    public List<QualifierProcessorExtension> loadExtensions() {
-        final ServiceLoader<QualifierProcessorExtension> loader = ServiceLoader
-                .load(QualifierProcessorExtension.class, getClass().getClassLoader());
-
-        /*
-         * This extra-safe loading prevents recursive compilation failures if the processor try to use an not yet
-         * compiled extension.
-         */
-        final ImmutableList.Builder<QualifierProcessorExtension> builder = new ImmutableList.Builder<>();
-        final Iterator<QualifierProcessorExtension> iterator = loader.iterator();
-        for (;;) {
-            try {
-                if (iterator.hasNext()) {
-                    final QualifierProcessorExtension next = iterator.next();
-                    System.out.println("loading " + next);
-                    builder.add(next);
-                }
-                else break;
-            } catch (Throwable exception) {
-                System.out.println("error loading extension: " + exception);
-                printWarning("Error loading extensions: " + exception);
-            }
-        }
-
-        ImmutableList<QualifierProcessorExtension> build = builder.build();
-        System.out.println("loaded " + build);
-        return build;
+        return ImmutableSet.of(Qualify.class.getName());
     }
 
     @Override
-    public synchronized void init(ProcessingEnvironment environment) {
-        super.init(environment);
-        System.out.println("init");
-        this.environment = environment;
-    }
-
-    public ProcessingEnvironment getEnvironment() {
-        return environment;
-    }
-
-    @Override
-    @SuppressWarnings("unchecked")
-    public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnvironment) {
-        System.out.println("processing round: " + roundEnvironment);
-        System.out.println("processing over: " + roundEnvironment.processingOver());
-        printMessage(getClass().getName() + " started.");
-        for (String supportedAnnotationName : getSupportedAnnotationTypes()) {
-            printMessage("Searching for " + supportedAnnotationName + " annotations.");
-            System.out.println("Searching for " + supportedAnnotationName + " annotations.");
-            try {
-                Class<?> supportedAnnotationClass = Class.forName(supportedAnnotationName);
-                if (supportedAnnotationClass.isAnnotation()) {
-                    for (Element annotatedElement : roundEnvironment
-                            .getElementsAnnotatedWith((Class<? extends Annotation>) supportedAnnotationClass)) {
-                        printMessage("Found " + annotatedElement.toString() + ".");
-                        try {
-                            this.process(annotatedElement);
-                        } catch (Exception exception) {
-                            final String message = "Error processing " + annotatedElement + ": " + exception;
-                            getEnvironment().getMessager().printMessage(ERROR, message, annotatedElement);
-                            exception.printStackTrace();
-                        }
+    public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment round) {
+        try {
+            for (String annotation : getSupportedAnnotationTypes()) {
+                printMessage("Processing " + annotation + " " + round);
+                for (Element element : round.getElementsAnnotatedWith(elementUtils().getTypeElement(annotation))) {
+                    final String processingMessage = "Qualifying " + element + " ";
+                    this.element = element;
+                    try {
+                        process(element);
+                        printMessage(processingMessage + " [success]");
+                    } catch (Exception e) {
+                        printError(processingMessage + " [failure]: " + e + "\n" + getStackTraceAsString(e));
+                    } finally {
+                        this.element = null;
                     }
                 }
-            } catch (ClassNotFoundException e) {
-                printError("Annotation not found: " + supportedAnnotationName);
             }
+            return true;
+        } catch (Exception e) {
+            printError("Fatal error processing " + annotations + round + ": " + e + "\n" + getStackTraceAsString(e));
+            throw Throwables.propagate(e);
         }
-        printMessage(getClass().getName() + " finished.");
-        return true;
     }
 
     public void process(Element proxyElement) {
@@ -166,13 +104,13 @@ public class StaticQualifierMetamodelProcessor extends AbstractProcessor impleme
         processed.add(proxyElement);
 
         final ReflectionHelper reflection = new ReflectionHelper(
-                getEnvironment(), (TypeElement) proxyElement, getProcessorExtensions());
+                processingEnv, (TypeElement) proxyElement, getProcessorExtensions());
 
         // 'Class' refer full qualified name, 'Name' refer to simple class name
         final String beanName = reflection.getSimpleClassName();
         final String qualifyName = reflection.getFlatName() + "__";
 
-        Filer filer = getEnvironment().getFiler();
+        Filer filer = processingEnv.getFiler();
         try (Writer sourceWriter = filer.createSourceFile(qualifyName, proxyElement).openWriter()) {
             final JavaWriter writer = new JavaWriter(sourceWriter);
             final Iterable<? extends QualifierDescriptor> qualifiers = reflection.getPropertyDescriptors();
@@ -236,7 +174,7 @@ public class StaticQualifierMetamodelProcessor extends AbstractProcessor impleme
                     format("ImmutableMap.%sbuilder()%s.build()", qualifiersType, sb.toString()));
 
             writer.endType();
-            printMessage(String.format("Generated static qualifying metamodel %s.", diagnostic.toString()));
+            printDigest(String.format("Generated static qualifying metamodel %s.", diagnostic.toString()));
         } catch (Exception e) {
             e.printStackTrace();
             printError(format("Fatal error '%s' processing type %s", e.getMessage(), proxyElement));
@@ -379,6 +317,38 @@ public class StaticQualifierMetamodelProcessor extends AbstractProcessor impleme
         writer.endType().emitEmptyLine();
     }
 
+    private synchronized List<QualifierProcessorExtension> getProcessorExtensions() {
+        if (processorExtensions == null) {
+            printMessage("Loading extensions...");
+            final ServiceLoader<QualifierProcessorExtension> loader = ServiceLoader
+                    .load(QualifierProcessorExtension.class, getClass().getClassLoader());
+            /*
+             * This extra-safe loading prevents recursive compilation failures if the processor try to use an not yet
+             * compiled extension.
+             */
+            final ImmutableList.Builder<QualifierProcessorExtension> builder = new ImmutableList.Builder<>();
+            final Iterator<QualifierProcessorExtension> iterator = loader.iterator();
+            for (;;) {
+                try {
+                    if (iterator.hasNext()) {
+                        final QualifierProcessorExtension next = iterator.next();
+                        printMessage("Loaded " + next);
+                        builder.add(next);
+                    }
+                    else break;
+                } catch (Throwable exception) {
+                    printWarning("Error loading extensions: " + exception);
+                }
+            }
+            final List<QualifierProcessorExtension> extensions = builder.build();
+            for (QualifierProcessorExtension extension : extensions) {
+                extension.init(processingEnv);
+            }
+            processorExtensions = extensions;
+        }
+        return this.processorExtensions;
+    }
+
     /** Return {@code Collection} type. */
     private DeclaredType getCollectionType() {
         if (declaredType == null) {
@@ -390,11 +360,11 @@ public class StaticQualifierMetamodelProcessor extends AbstractProcessor impleme
     }
 
     private Types typeUtils() {
-        return getEnvironment().getTypeUtils();
+        return processingEnv.getTypeUtils();
     }
 
     private Elements elementUtils() {
-        return getEnvironment().getElementUtils();
+        return processingEnv.getElementUtils();
     }
 
     private String qualifierType(String simpleName, String propertyType) {
@@ -411,16 +381,22 @@ public class StaticQualifierMetamodelProcessor extends AbstractProcessor impleme
         return String.format("BeanQualifier<%s>", beanType);
     }
 
+    public void printDigest(String message) {
+        if (Boolean.valueOf(processingEnv.getOptions().get("digest"))) {
+            processingEnv.getMessager().printMessage(OTHER, message);
+        }
+    }
+
     public void printMessage(String message) {
-        getEnvironment().getMessager().printMessage(NOTE, message);
+        processingEnv.getMessager().printMessage(NOTE, message);
     }
 
     public void printWarning(String message) {
-        getEnvironment().getMessager().printMessage(WARNING, message);
+        processingEnv.getMessager().printMessage(WARNING, message, element);
     }
 
     public void printError(String message) {
-        getEnvironment().getMessager().printMessage(ERROR, message);
+        processingEnv.getMessager().printMessage(ERROR, message, element);
     }
 
 }

@@ -35,7 +35,7 @@ public interface Qualifier<T, V> extends Function<T, V> {
     Comparator<? super T> getComparator();
 
     /** Traverse a qualifier returning a new qualifier which has source type this and value type property. */
-    <ValueU> Qualifier<T, ValueU> as(Qualifier<V, ValueU> property);
+    <ValueU> Qualifier<T, ValueU> as(Qualifier<? super V, ValueU> property);
 
     // TODO I18n interface
     /** The name of the property (e.g. 'User logo'). Defaults to the property or field name. */
