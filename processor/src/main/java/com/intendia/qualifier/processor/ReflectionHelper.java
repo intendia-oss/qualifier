@@ -120,7 +120,7 @@ public class ReflectionHelper {
 
     public String getFlatName() {
         if (classRepresenter.getNestingKind() == NestingKind.MEMBER) {
-            return classRepresenter.getEnclosingElement() + "$" + getSimpleClassName();
+            return classRepresenter.getEnclosingElement() + "" + getSimpleClassName();
         }  else {
             return getClassName();
         }
