@@ -2,7 +2,7 @@
     <parent>
         <groupId>com.intendia.qualifier</groupId>
         <artifactId>qualifier-extensions</artifactId>
-        <version>0.7-SNAPSHOT</version>
+        <version>0.7</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
     <artifactId>qualifier-guava-extension</artifactId>
