@@ -22,6 +22,8 @@ public interface Qualifier<T, V> extends Function<T, V> {
 
     Class<V> getType();
 
+    Class<?>[] getGenerics();
+
     /** Return the properties context of this qualifier. */
     Map<String, Object> getContext();
 

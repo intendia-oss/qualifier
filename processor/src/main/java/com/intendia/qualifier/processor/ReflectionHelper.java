@@ -1,14 +1,11 @@
 // Copyright 2013 Intendia, SL.
 package com.intendia.qualifier.processor;
 
-import static com.google.common.base.Objects.toStringHelper;
-import static com.google.common.base.Strings.emptyToNull;
 import static com.intendia.qualifier.Qualifiers.CORE_NAME;
 import static com.intendia.qualifier.processor.AbstractQualifierProcessorExtension.TypedQualifierAnnotationAnalyzerDecorator;
 import static java.lang.String.format;
 
 import com.google.common.base.CaseFormat;
-import com.google.common.base.Joiner;
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
@@ -20,10 +17,21 @@ import com.google.common.collect.Maps;
 import com.intendia.qualifier.annotation.QualifyExtension;
 import com.intendia.qualifier.annotation.SkipStaticQualifierMetamodelGenerator;
 import java.lang.annotation.Annotation;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.Set;
+import java.util.SortedMap;
 import javax.annotation.Nullable;
 import javax.annotation.processing.ProcessingEnvironment;
-import javax.lang.model.element.*;
+import javax.lang.model.element.AnnotationMirror;
+import javax.lang.model.element.Element;
+import javax.lang.model.element.ExecutableElement;
+import javax.lang.model.element.Modifier;
+import javax.lang.model.element.NestingKind;
+import javax.lang.model.element.TypeElement;
+import javax.lang.model.element.VariableElement;
+import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.MirroredTypeException;
 import javax.lang.model.type.PrimitiveType;
 import javax.lang.model.type.TypeKind;
@@ -351,8 +359,8 @@ public class ReflectionHelper {
 
         /** The property type. Primitive types are returned as boxed. */
         @Override
-        public TypeMirror getType() {
-            if (name.equals(SELF)) return getClassRepresenter().asType();
+        public DeclaredType getType() {
+            if (name.equals(SELF)) return (DeclaredType) getClassRepresenter().asType();
             // Non SELF properties must have getter or setter, and if both exist the type must match
             assert getter != null || setter != null;
             // TODO next assert fails on static (category) setters
@@ -362,7 +370,7 @@ public class ReflectionHelper {
             if (typeMirror.getKind().isPrimitive()) {
                 typeMirror = types().boxedClass((PrimitiveType) typeMirror).asType();
             }
-            return typeMirror;
+            return (DeclaredType) typeMirror;
         }
 
         private void processAnnotationUsingProcessorExtensions(Element method) {

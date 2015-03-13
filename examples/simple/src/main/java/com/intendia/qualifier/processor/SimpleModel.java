@@ -15,6 +15,8 @@ public interface SimpleModel {
     @Simple(getString = "s", getType = SimpleInnerInterface.class, getInteger = 1)
     public String getSimpleValue();
 
+    public List<String> getStringListValue();
+
     @Qualify
     static class SimpleInner {
     }

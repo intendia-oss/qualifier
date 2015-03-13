@@ -1,19 +1,29 @@
 // Copyright 2014 Intendia, SL.
 package com.intendia.qualifier.processor;
 
-import static com.intendia.qualifier.Qualifiers.*;
+import static com.google.common.collect.FluentIterable.from;
+import static com.intendia.qualifier.Qualifiers.CORE_NAME;
+import static com.intendia.qualifier.Qualifiers.I18N_ABBREVIATION;
+import static com.intendia.qualifier.Qualifiers.I18N_DESCRIPTION;
+import static com.intendia.qualifier.Qualifiers.I18N_SUMMARY;
+import static com.intendia.qualifier.Qualifiers.MEASURE_QUANTITY;
+import static com.intendia.qualifier.Qualifiers.MEASURE_UNIT_OF_MEASURE;
+import static com.intendia.qualifier.Qualifiers.REPRESENTER_CELL;
+import static com.intendia.qualifier.Qualifiers.REPRESENTER_HTML_RENDERER;
+import static com.intendia.qualifier.Qualifiers.REPRESENTER_TEXT_RENDERER;
 import static com.intendia.qualifier.processor.ReflectionHelper.QualifyExtensionData;
 
 import com.google.common.base.Predicate;
-import com.google.common.collect.FluentIterable;
-import com.google.common.collect.ImmutableList;
 import com.intendia.qualifier.annotation.Qualify;
 import com.intendia.qualifier.annotation.QualifyExtension;
 import java.util.Collection;
 import java.util.List;
-import javax.lang.model.element.*;
+import javax.lang.model.element.AnnotationMirror;
+import javax.lang.model.element.Element;
+import javax.lang.model.element.ExecutableElement;
+import javax.lang.model.element.Modifier;
+import javax.lang.model.element.TypeElement;
 import javax.lang.model.type.MirroredTypeException;
-import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.ElementFilter;
 import javax.tools.Diagnostic;
 
@@ -71,23 +81,18 @@ public class CoreQualifierProcessor extends AbstractQualifierProcessorExtension
         if (type.toString().equals("java.lang.Class")) return;
 
         // Check extensions types has a valid valueOf(String) static method
-        final TypeElement stringType = getProcessingEnv().getElementUtils().getTypeElement(
-                String.class.toString());
-        final ImmutableList<ExecutableElement> invalidTypes = FluentIterable
-                .from(getExecutableElements(type)).filter(new Predicate<ExecutableElement>() {
-                    @Override
-                    public boolean apply(ExecutableElement input) {
-                        final String name = input.getSimpleName().toString();
-                        final TypeMirror returnType = input.getReturnType();
-
-                        if (!name.equals("valueOf")) return false;
-                        if (!input.getModifiers().contains(Modifier.STATIC)) return false;
-                        if (input.getParameters().size() != 1) return false;
-                        if (!isFirstParameterStringType(input)) return false;
-                        return true;
-                    }
-                }).toList();
-        if (invalidTypes.isEmpty()) { // non empty implies static valueOf(String) found
+        final boolean valid = from(getExecutableElements(type)).anyMatch(new Predicate<ExecutableElement>() {
+            @Override
+            public boolean apply(ExecutableElement input) {
+                final String name = input.getSimpleName().toString();
+                if (!name.equals("valueOf")) return false;
+                if (!input.getModifiers().contains(Modifier.STATIC)) return false;
+                if (input.getParameters().size() != 1) return false;
+                if (!isFirstParameterStringType(input)) return false;
+                return true;
+            }
+        });
+        if (!valid) {
             getProcessingEnv().getMessager().printMessage(Diagnostic.Kind.ERROR, String.format(
                     "Qualifier extension type '%s' with key '%s' must have a 'valueOf(String)' static " +
                             "method", qualifyExtensionData.getType(), qualifyExtensionData.getKey()),

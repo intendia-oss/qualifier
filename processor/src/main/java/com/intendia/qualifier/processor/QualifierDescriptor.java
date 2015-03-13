@@ -5,12 +5,12 @@ import static com.intendia.qualifier.processor.ReflectionHelper.QualifyExtension
 import javax.annotation.Nullable;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.TypeElement;
-import javax.lang.model.type.TypeMirror;
+import javax.lang.model.type.DeclaredType;
 
 public interface QualifierDescriptor {
     String getName();
 
-    TypeMirror getType();
+    DeclaredType getType();
 
     TypeElement getClassRepresenter();
 

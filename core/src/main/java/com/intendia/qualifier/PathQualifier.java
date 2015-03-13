@@ -41,6 +41,11 @@ class PathQualifier<T, V, U> implements Qualifier<T, V> {
     }
 
     @Override
+    public Class<?>[] getGenerics() {
+        return child.getGenerics();
+    }
+
+    @Override
     @Nullable
     public V get(T object) {
         U value = parent.get(object);

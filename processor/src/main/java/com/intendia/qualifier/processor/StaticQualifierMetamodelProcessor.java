@@ -4,6 +4,7 @@ package com.intendia.qualifier.processor;
 
 import static com.google.common.base.MoreObjects.ToStringHelper;
 import static com.google.common.base.Throwables.getStackTraceAsString;
+import static com.google.common.collect.FluentIterable.from;
 import static java.lang.String.format;
 import static java.util.EnumSet.of;
 import static javax.lang.model.element.ElementKind.CLASS;
@@ -18,6 +19,8 @@ import static javax.tools.Diagnostic.Kind.NOTE;
 import static javax.tools.Diagnostic.Kind.OTHER;
 import static javax.tools.Diagnostic.Kind.WARNING;
 
+import com.google.common.base.Function;
+import com.google.common.base.Joiner;
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
@@ -47,8 +50,9 @@ import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.type.DeclaredType;
+import javax.lang.model.type.TypeKind;
+import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.Elements;
-import javax.lang.model.util.Types;
 
 /** Static Qualifier Metamodel Processor. */
 public class StaticQualifierMetamodelProcessor extends AbstractProcessor implements Processor {
@@ -224,16 +228,24 @@ public class StaticQualifierMetamodelProcessor extends AbstractProcessor impleme
 
         // Property type
         writer.emitAnnotation(Override.class);
-        if (typeUtils().isSubtype(property.getType(), getCollectionType())) {
-            writer.beginMethod(format("Class<%s>", propertyType), "getType", of(PUBLIC));
-            // writer.emitStatement("return %s.class",
-            // typeUtils().erasure(property.getPropertyType()).toString());
-            writer.emitStatement("return null");
-        } else {
-            writer.beginMethod(format("Class<%s>", propertyType), "getType", of(PUBLIC));
-            writer.emitStatement("return %s.class", propertyType);
-        }
+        writer.beginMethod(format("Class<%s>", propertyType), "getType", of(PUBLIC));
+        if (propertyType.indexOf('<') < 0) writer.emitStatement("return %s.class", propertyType);
+        else writer.emitStatement("return (Class) %s.class", propertyType.split("<")[0]);
         writer.endMethod().emitEmptyLine();
+
+        // Property generics
+        final List<? extends TypeMirror> typeArguments = property.getType().getTypeArguments();
+        if (!typeArguments.isEmpty()) {
+            writer.emitAnnotation(Override.class);
+            writer.beginMethod("Class<?>[]", "getGenerics", of(PUBLIC));
+            writer.emitStatement("return new Class<?>[]{%s}", from(typeArguments)
+                    .transform(new Function<TypeMirror, String>() {
+                        public String apply(TypeMirror input) {
+                            return input.getKind() == TypeKind.WILDCARD ? "null" : input + ".class";
+                        }
+                    }).join(Joiner.on(',')));
+            writer.endMethod().emitEmptyLine();
+        }
 
         // Property getter
         final ExecutableElement getter = property.getGetter();
@@ -347,20 +359,6 @@ public class StaticQualifierMetamodelProcessor extends AbstractProcessor impleme
             processorExtensions = extensions;
         }
         return this.processorExtensions;
-    }
-
-    /** Return {@code Collection} type. */
-    private DeclaredType getCollectionType() {
-        if (declaredType == null) {
-            declaredType = typeUtils().getDeclaredType(
-                    elementUtils().getTypeElement("java.util.Collection"),
-                    typeUtils().getWildcardType(null, null));
-        }
-        return declaredType;
-    }
-
-    private Types typeUtils() {
-        return processingEnv.getTypeUtils();
     }
 
     private Elements elementUtils() {

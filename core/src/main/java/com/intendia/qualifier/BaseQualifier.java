@@ -53,6 +53,11 @@ public abstract class BaseQualifier<T, V> implements Qualifier<T, V> {
     }
 
     @Override
+    public Class<?>[] getGenerics() {
+        return new Class[0];
+    }
+
+    @Override
     public String getPath() {
         return getName();
     }

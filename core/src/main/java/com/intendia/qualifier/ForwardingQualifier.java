@@ -25,6 +25,11 @@ public abstract class ForwardingQualifier<T, V>
     protected abstract Qualifier<T, V> delegate();
 
     @Override
+    public Class<?>[] getGenerics() {
+        return delegate().getGenerics();
+    }
+
+    @Override
     public String getPath() {
         return delegate().getPath();
     }
