@@ -69,7 +69,7 @@ public abstract class BaseQualifier<T, V> implements Qualifier<T, V> {
     }
 
     @Override
-    public Boolean isReadable(){
+    public Boolean isReadable() {
         return Boolean.FALSE;
     }
 
@@ -149,6 +149,6 @@ public abstract class BaseQualifier<T, V> implements Qualifier<T, V> {
 
     @Override
     public String toString() {
-        return getType() + "Metadata." + getPath();
+        return getPath() + "[" + getType() + "]";
     }
 }
