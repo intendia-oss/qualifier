@@ -49,8 +49,12 @@ public class QualifierContext {
 
     public QualifyExtensionData put(QualifyExtension annotation) { return put(new DataExtension(annotation)); }
 
-    public QualifyExtensionData putClass(String key, DeclaredType type, String value) {
+    public QualifyExtensionData put(String key, DeclaredType type, String value) {
         return put(new DataExtension(key, type, value));
+    }
+
+    public QualifyExtensionData putClass(String key, String className) {
+        return put(key, helper.classType, className);
     }
 
     public QualifyExtensionData putLiteral(String key, String literalValue) {

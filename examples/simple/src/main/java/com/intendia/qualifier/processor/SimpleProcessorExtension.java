@@ -17,7 +17,7 @@ public class SimpleProcessorExtension extends AbstractQualifierProcessorExtensio
 
                 TypeElement typeElement = getProcessingEnv().getElementUtils().getTypeElement("java.lang.Class");
                 DeclaredType classType = getProcessingEnv().getTypeUtils().getDeclaredType(typeElement);
-                qualifierCtx.putClass("simple.getType", classType, parametersType(value));
+                qualifierCtx.put("simple.getType", classType, parametersType(value));
 
                 // literal values outputs as a literal expression but has no processor-time value
                 QualifyExtensionData literalExtension = qualifierCtx.putLiteral("simple.getLiteral", "new Object()");

@@ -45,6 +45,7 @@ public class ReflectionHelper {
     private final TypeElement classRepresenter;
     private final ProcessingEnvironment environment;
     private final List<QualifierProcessorExtension> processorExtensions;
+    final DeclaredType classType;
     private TypeElement[] e;
 
     public ReflectionHelper(ProcessingEnvironment environment, TypeElement classRepresenter,
@@ -52,6 +53,8 @@ public class ReflectionHelper {
         this.classRepresenter = classRepresenter;
         this.environment = environment;
         this.processorExtensions = processorExtensions;
+        final TypeElement jlcElement = environment.getElementUtils().getTypeElement("java.lang.Class");
+        this.classType = environment.getTypeUtils().getDeclaredType(jlcElement);
     }
 
     public static String toLower(String str) {
