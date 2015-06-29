@@ -11,7 +11,6 @@ import static com.intendia.qualifier.Qualifiers.MEASURE_UNIT_OF_MEASURE;
 import static com.intendia.qualifier.Qualifiers.REPRESENTER_CELL;
 import static com.intendia.qualifier.Qualifiers.REPRESENTER_HTML_RENDERER;
 import static com.intendia.qualifier.Qualifiers.REPRESENTER_TEXT_RENDERER;
-import static com.intendia.qualifier.processor.ReflectionHelper.QualifyExtensionData;
 
 import com.google.common.base.Predicate;
 import com.intendia.qualifier.annotation.Qualify;
@@ -70,8 +69,7 @@ public class CoreQualifierProcessor extends AbstractQualifierProcessorExtension
 
     public void addQualifyExtension(QualifierContext context, Element annotatedElement,
             AnnotationMirror annotationMirror, QualifyExtension qualifyExtension) {
-        final QualifyExtensionData qualifyExtensionData = QualifyExtensionData.of(qualifyExtension);
-        context.put(qualifyExtensionData);
+        final QualifyExtensionData qualifyExtensionData = context.put(qualifyExtension);
 
         final TypeElement type = getProcessingEnv().getElementUtils()
                 .getTypeElement(qualifyExtensionData.getType().toString());
@@ -88,8 +86,7 @@ public class CoreQualifierProcessor extends AbstractQualifierProcessorExtension
                 if (!name.equals("valueOf")) return false;
                 if (!input.getModifiers().contains(Modifier.STATIC)) return false;
                 if (input.getParameters().size() != 1) return false;
-                if (!isFirstParameterStringType(input)) return false;
-                return true;
+                return isFirstParameterStringType(input);
             }
         });
         if (!valid) {

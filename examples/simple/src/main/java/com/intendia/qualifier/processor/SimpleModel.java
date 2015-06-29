@@ -1,5 +1,6 @@
 package com.intendia.qualifier.processor;
 
+import com.google.common.base.Predicate;
 import com.intendia.qualifier.annotation.Qualify;
 import com.intendia.qualifier.annotation.QualifyExtension;
 import java.util.List;
@@ -12,24 +13,18 @@ import java.util.concurrent.TimeUnit;
         @QualifyExtension(key = "extension.class", type = Class.class, value = "java.lang.String"),
 })
 public interface SimpleModel {
-    @Simple(getString = "s", getType = SimpleInnerInterface.class, getInteger = 1)
-    public String getSimpleValue();
+    @Simple(getString = "s", getType = SimpleInnerInterface.class, getInteger = 1) String getSimpleValue();
 
-    public List<String> getStringListValue();
+    List<String> getStringListValue();
 
-    @Qualify
-    static class SimpleInner {
-    }
+    @Qualify class SimpleInner {}
 
-    @Qualify
-    @Simple(getString = "s", getType = SimpleInnerInterface.class, getInteger = 1)
-    interface SimpleDependant extends com.google.common.base.Predicate<SimpleInnerInterface> {
-    }
+    @Qualify @Simple(getString = "s", getType = SimpleInnerInterface.class, getInteger = 1)
+    interface SimpleDependant extends Predicate<SimpleInnerInterface> {}
 
-    @Qualify
-    interface SimpleInnerInterface {
-        public List<String> getVehicleParam();
+    @Qualify interface SimpleInnerInterface {
+        List<String> getVehicleParam();
 
-        public void setVehicleParam(List<String> vehicleParam);
+        void setVehicleParam(List<String> vehicleParam);
     }
 }

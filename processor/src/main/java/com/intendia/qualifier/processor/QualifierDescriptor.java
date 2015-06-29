@@ -1,7 +1,5 @@
 package com.intendia.qualifier.processor;
 
-import static com.intendia.qualifier.processor.ReflectionHelper.QualifyExtensionData;
-
 import javax.annotation.Nullable;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.TypeElement;
@@ -14,11 +12,9 @@ public interface QualifierDescriptor {
 
     TypeElement getClassRepresenter();
 
-    @Nullable
-    ExecutableElement getGetter();
+    @Nullable ExecutableElement getGetter();
 
-    @Nullable
-    ExecutableElement getSetter();
+    @Nullable ExecutableElement getSetter();
 
     QualifierContext getContext();
 

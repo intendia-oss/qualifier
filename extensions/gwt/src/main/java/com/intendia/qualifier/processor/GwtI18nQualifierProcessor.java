@@ -3,12 +3,18 @@ package com.intendia.qualifier.processor;
 
 import static com.google.gwt.i18n.client.Constants.DefaultStringValue;
 import static com.google.gwt.i18n.client.LocalizableResource.Key;
-import static com.intendia.qualifier.Qualifiers.*;
+import static com.intendia.qualifier.Qualifiers.I18N_ABBREVIATION;
+import static com.intendia.qualifier.Qualifiers.I18N_DESCRIPTION;
+import static com.intendia.qualifier.Qualifiers.I18N_SUMMARY;
 import static com.intendia.qualifier.processor.ReflectionHelper.toLower;
 import static com.intendia.qualifier.processor.ReflectionHelper.toTitle;
 import static java.lang.String.format;
 import static java.util.EnumSet.of;
-import static javax.lang.model.element.Modifier.*;
+import static javax.lang.model.element.Modifier.ABSTRACT;
+import static javax.lang.model.element.Modifier.FINAL;
+import static javax.lang.model.element.Modifier.PRIVATE;
+import static javax.lang.model.element.Modifier.PUBLIC;
+import static javax.lang.model.element.Modifier.STATIC;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.gwt.i18n.client.Constants;
@@ -17,17 +23,12 @@ import com.squareup.javawriter.JavaWriter;
 import java.io.IOException;
 
 public class GwtI18nQualifierProcessor extends AbstractQualifierProcessorExtension {
-
     private static final String KEY_FORMAT = "\"metamodel.%s.%s\"";
     public static final String CONSTANTS = "constants";
 
-    @Override
-    public boolean processable() {
-        return classExists("com.google.gwt.i18n.client.LocalizableResource");
-    }
+    @Override public boolean processable() { return classExists("com.google.gwt.i18n.client.LocalizableResource"); }
 
-    @Override
-    public void processBeanQualifier(final JavaWriter writer, final String beanName,
+    @Override public void processBeanQualifier(final JavaWriter writer, final String beanName,
             Iterable<? extends QualifierDescriptor> properties) throws IOException {
         final String constantsClass = writer.compressType(beanName + "Constants");
         writer.emitAnnotation(LocalizableResource.Generate.class.getSimpleName(), ImmutableMap.of("format",
@@ -84,9 +85,8 @@ public class GwtI18nQualifierProcessor extends AbstractQualifierProcessorExtensi
                 : toTitle(property.getName());
     }
 
-    @Override
-    public void processPropertyQualifier(JavaWriter writer, String beanName, String propertyName,
-            QualifierDescriptor property) throws IOException {
+    @Override public void processPropertyQualifier(
+            JavaWriter writer, String beanName, String propertyName, QualifierDescriptor property) throws IOException {
         final String name = getConstantPropertyName(beanName, propertyName);
         final boolean description = property.getContext().contains(I18N_DESCRIPTION);
         final boolean abbreviation = property.getContext().contains(I18N_ABBREVIATION);
@@ -99,5 +99,4 @@ public class GwtI18nQualifierProcessor extends AbstractQualifierProcessorExtensi
     private String getConstantPropertyName(String proxySimpleName, String propertyName) {
         return toLower(proxySimpleName) + ReflectionHelper.toUpper(propertyName);
     }
-
 }

@@ -27,7 +27,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.intendia.qualifier.annotation.Qualify;
 import com.intendia.qualifier.annotation.SkipStaticQualifierMetamodelGenerator;
-import com.intendia.qualifier.processor.ReflectionHelper.QualifyExtensionData;
 import com.squareup.javawriter.JavaWriter;
 import java.io.IOException;
 import java.io.Writer;
@@ -181,7 +180,7 @@ public class StaticQualifierMetamodelProcessor extends AbstractProcessor impleme
             printDigest(String.format("Generated static qualifying metamodel %s.", diagnostic.toString()));
         } catch (Exception e) {
             e.printStackTrace();
-            printError(format("Fatal error '%s' processing type %s", e.getMessage(), proxyElement));
+            printError(format("Fatal error '%s' processing type %s%n%s", e, proxyElement, getStackTraceAsString(e)));
             throw new RuntimeException(e);
         }
 
@@ -318,7 +317,7 @@ public class StaticQualifierMetamodelProcessor extends AbstractProcessor impleme
         // Property context
         StringBuilder sb = new StringBuilder();
         for (QualifyExtensionData extension : property.getExtensions()) { // add extensions
-            sb.append(String.format("\n.put(\"%s\", %s)", extension.getKey(), extension.toCastValue()));
+            sb.append(String.format("\n.put(\"%s\", %s)", extension.getKey(), extension.toLiteral()));
         }
 
         writer.emitAnnotation(Override.class)
