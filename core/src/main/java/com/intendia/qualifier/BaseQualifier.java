@@ -20,10 +20,7 @@ import javax.measure.quantity.Quantity;
 import javax.measure.unit.Unit;
 
 public abstract class BaseQualifier<T, V> implements Qualifier<T, V> {
-
-    @Inject
-    private static Provider<QualifierManager> qualifierManagerProvider;
-
+    private static @Inject Provider<ResourceManager> RESOURCE_MANAGER;
     private final static Ordering<Object> objectComparator = usingToString().nullsFirst();
     private final static Ordering<Comparable<?>> comparableComparator = natural().nullsFirst();
     private final static Ordering<String> stringComparator = from(String.CASE_INSENSITIVE_ORDER).nullsFirst();
@@ -31,8 +28,7 @@ public abstract class BaseQualifier<T, V> implements Qualifier<T, V> {
     private final Comparator<T> runtimeComparator = new Comparator<T>() {
         private Renderer<V> renderer;
 
-        @Override
-        public int compare(T o1, T o2) {
+        @Override public int compare(T o1, T o2) {
             // TODO use compilation time comparator
             V left = o1 == null ? null : get(o1), right = o2 == null ? null : get(o2);
             if (left == null || right == null) {
@@ -48,8 +44,8 @@ public abstract class BaseQualifier<T, V> implements Qualifier<T, V> {
         }
     };
 
-    protected QualifierManager getManager() {
-        return qualifierManagerProvider.get();
+    protected ResourceManager getManager() {
+        return RESOURCE_MANAGER.get();
     }
 
     @Override

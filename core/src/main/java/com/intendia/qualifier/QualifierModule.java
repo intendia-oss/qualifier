@@ -23,7 +23,7 @@ public class QualifierModule extends AbstractGinModule {
 
     @Override
     protected void configure() {
-        bind(QualifierManager.class).to(QualifierManager.StandardQualifierManager.class);
+        bind(ResourceManager.class).to(ResourceManager.StandardResourceManager.class);
         install(new DefaultResources());
     }
 

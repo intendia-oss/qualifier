@@ -9,9 +9,4 @@
 
     <!-- Specify the paths for translatable code -->
 	<source path="" excludes="rebind/**,processor/**"/>
-
-    <generate-with class="com.intendia.qualifier.rebind.StaticQualifierLoaderGenerator">
-        <when-type-is class="com.intendia.qualifier.StaticQualifierLoader"/>
-    </generate-with>
-
 </module>

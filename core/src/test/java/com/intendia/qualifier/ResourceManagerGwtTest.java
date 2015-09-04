@@ -12,9 +12,8 @@ import com.google.gwt.junit.client.GWTTestCase;
 import com.google.gwt.text.shared.AbstractRenderer;
 import com.google.gwt.text.shared.Renderer;
 import com.intendia.qualifier.ResourceProvider.TextRendererResourceProvider;
-import java.util.Set;
 
-public class QualifierManagerGwtTest extends GWTTestCase {
+public class ResourceManagerGwtTest extends GWTTestCase {
     @Override
     public String getModuleName() {
         return "com.intendia.qualifier.Qualify";
@@ -60,24 +59,12 @@ public class QualifierManagerGwtTest extends GWTTestCase {
         }
     }
 
-    @GinModules(MyModule.class)
-    static interface MyGinjector extends Ginjector {
-        QualifierManager getQualifierManager();
-    }
-
-    public void testGetBeanQualifier() throws Exception {
-        final QualifierManager manager = GWT.<MyGinjector> create(MyGinjector.class).getQualifierManager();
-        assertNotNull(manager.getBeanQualifiers());
-    }
-
-    public void testGetBeanQualifiers() throws Exception {
-        final QualifierManager manager = GWT.<MyGinjector> create(MyGinjector.class).getQualifierManager();
-        final Set<? extends BeanQualifier<?>> beanQualifiers = manager.getBeanQualifiers();
-        assertNotNull(beanQualifiers);
+    @GinModules(MyModule.class) interface MyGinjector extends Ginjector {
+        ResourceManager getResourceManager();
     }
 
     public void testCreateRenderer() throws Exception {
-        final QualifierManager manager = GWT.<MyGinjector> create(MyGinjector.class).getQualifierManager();
+        final ResourceManager manager = GWT.<MyGinjector>create(MyGinjector.class).getResourceManager();
         final Renderer<? super String> defaultRenderer = manager.createRenderer(null, "");
         assertEquals(defaultRenderer.render("passthrough"), "passthrough");
         final Renderer<? super String> s1 = manager.createRenderer(null, "simple");
@@ -86,7 +73,7 @@ public class QualifierManagerGwtTest extends GWTTestCase {
     }
 
     public void testConfigureRendererOnOtherModules() throws Exception {
-        final QualifierManager manager = GWT.<MyGinjector> create(MyGinjector.class).getQualifierManager();
+        final ResourceManager manager = GWT.<MyGinjector>create(MyGinjector.class).getResourceManager();
         final Renderer<? super Object> renderer = manager.createRenderer(null, "myRenderer");
         assertEquals(renderer.render("is awesome"), "my renderer is awesome");
     }
