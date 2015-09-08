@@ -1,5 +1,1 @@
-# Copyright 2014 Intendia, SL.
 com.intendia.qualifier.processor.CoreQualifierProcessor
-com.intendia.qualifier.processor.I18nQualifierProcessor
-com.intendia.qualifier.processor.MeasureQualifierProcessor
-com.intendia.qualifier.processor.RepresenterQualifierProcessor

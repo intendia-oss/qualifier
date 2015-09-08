@@ -5,25 +5,22 @@ import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.MirroredTypeException;
 
 public class SimpleProcessorExtension extends AbstractQualifierProcessorExtension {
-    public SimpleProcessorExtension() {
-        addAnnotationAnalyzer(Simple.class, new QualifierAnnotationAnalyzer<Simple>() {
-            @Override
-            public void processAnnotation(AnnotationContext<Simple> annotationCtx) {
-                final QualifierContext qualifierCtx = annotationCtx.getContext();
-                final Simple value = annotationCtx.getAnnotation();
-                qualifierCtx.putIfNotNull("simple.loaded", "xxx");
-                qualifierCtx.put("simple.getString", value.getString());
-                qualifierCtx.put("simple.getInteger", value.getInteger());
+    public SimpleProcessorExtension() { registerAnnotation(Simple.class, this::processSimple); }
 
-                TypeElement typeElement = getProcessingEnv().getElementUtils().getTypeElement("java.lang.Class");
-                DeclaredType classType = getProcessingEnv().getTypeUtils().getDeclaredType(typeElement);
-                qualifierCtx.put("simple.getType", classType, parametersType(value));
+    private void processSimple(AnnotationContext<Simple> simple) {
+        final QualifierMetadata qualifierCtx = simple.getMetadata();
+        final Simple value = simple.getAnnotation();
+        qualifierCtx.putIfNotNull("simple.loaded", "xxx");
+        qualifierCtx.put("simple.getString", value.getString());
+        qualifierCtx.put("simple.getInteger", value.getInteger());
 
-                // literal values outputs as a literal expression but has no processor-time value
-                QualifyExtensionData literalExtension = qualifierCtx.putLiteral("simple.getLiteral", "new Object()");
-                // String processorTimeValue = literalExtension.getValue(String.class); this throws exception
-            }
-        });
+        TypeElement typeElement = getProcessingEnv().getElementUtils().getTypeElement("java.lang.Class");
+        DeclaredType classType = getProcessingEnv().getTypeUtils().getDeclaredType(typeElement);
+        qualifierCtx.put("simple.getType", classType, parametersType(value));
+
+        // literal values outputs as a literal expression but has no processor-time value
+        QualifierMetadata.Entry literalExtension = qualifierCtx.putLiteral("simple.getLiteral", "new Object()");
+        // String processorTimeValue = literalExtension.getValue(String.class); this throws exception
     }
 
     private static String parametersType(Simple annotation) {

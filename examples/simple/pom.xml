@@ -10,23 +10,11 @@
     <artifactId>qualifier-simple-example</artifactId>
     <name>Qualifier :: Simple Example</name>
 
-    <dependencies>
-        <dependency>
-            <groupId>com.intendia.qualifier</groupId>
-            <artifactId>qualifier-all-extension</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>com.intendia.qualifier</groupId>
-            <artifactId>qualifier-processor</artifactId>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>junit</groupId>
-            <artifactId>junit</artifactId>
-            <scope>test</scope>
-        </dependency>
-    </dependencies>
+    <dependencies><!-- @formatter:off -->
+        <dependency><groupId>com.intendia.qualifier</groupId><artifactId>qualifier-processor</artifactId><scope>provided</scope></dependency>
+        <!-- Tests -->
+        <dependency><groupId>junit</groupId><artifactId>junit</artifactId><scope>test</scope></dependency>
+    </dependencies><!-- @formatter:on -->
 
     <build>
         <plugins>

@@ -9,7 +9,6 @@
     <name>Qualifier :: Examples</name>
     <packaging>pom</packaging>
     <modules>
-        <module>gwt-example</module>
         <module>simple</module>
     </modules>
 </project>

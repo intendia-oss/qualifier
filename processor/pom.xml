@@ -8,32 +8,17 @@
     <artifactId>qualifier-processor</artifactId>
     <name>Qualifier :: Processor</name>
 
-    <dependencies>
-        <dependency>
-            <groupId>com.intendia.qualifier</groupId>
-            <artifactId>qualifier</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.google.guava</groupId>
-            <artifactId>guava</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.google.gwt</groupId>
-            <artifactId>gwt-user</artifactId>
-            <optional>true</optional>
-        </dependency>
+    <dependencies><!-- @formatter:off -->
+        <dependency><groupId>com.google.auto</groupId><artifactId>auto-common</artifactId></dependency>
+        <dependency><groupId>com.google.guava</groupId><artifactId>guava</artifactId></dependency>
+        <dependency><groupId>com.intendia.qualifier</groupId><artifactId>qualifier</artifactId></dependency>
+        <dependency><groupId>com.squareup</groupId><artifactId>javapoet</artifactId></dependency>
+        <!-- Optional -->
+        <dependency><groupId>com.google.code.findbugs</groupId><artifactId>jsr305</artifactId><optional>true</optional></dependency>
         <!-- Test -->
-        <dependency>
-            <groupId>com.google.testing.compile</groupId>
-            <artifactId>compile-testing</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.truth0</groupId>
-            <artifactId>truth</artifactId>
-            <scope>test</scope>
-        </dependency>
-    </dependencies>
+        <dependency><groupId>com.google.testing.compile</groupId><artifactId>compile-testing</artifactId><scope>test</scope></dependency>
+        <dependency><groupId>org.truth0</groupId><artifactId>truth</artifactId><scope>test</scope></dependency>
+    </dependencies><!-- @formatter:on -->
 
     <build>
         <plugins>
@@ -43,17 +28,23 @@
                 <executions>
                     <execution>
                         <id>default-compile</id>
-                        <goals><goal>compile</goal></goals>
+                        <goals>
+                            <goal>compile</goal>
+                        </goals>
                         <configuration>
                             <compilerArgument>-proc:none</compilerArgument>
                         </configuration>
                     </execution>
                     <execution>
                         <id>default-test-compile</id>
-                        <goals><goal>testCompile</goal></goals>
+                        <goals>
+                            <goal>testCompile</goal>
+                        </goals>
                         <configuration>
                             <annotationProcessors>
-                                <annotationProcessor>com.intendia.qualifier.processor.StaticQualifierMetamodelProcessor</annotationProcessor>
+                                <annotationProcessor>
+                                    com.intendia.qualifier.processor.StaticQualifierMetamodelProcessor
+                                </annotationProcessor>
                             </annotationProcessors>
                         </configuration>
                     </execution>
