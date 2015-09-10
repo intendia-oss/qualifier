@@ -15,25 +15,4 @@
         <!-- Tests -->
         <dependency><groupId>junit</groupId><artifactId>junit</artifactId><scope>test</scope></dependency>
     </dependencies><!-- @formatter:on -->
-
-    <build>
-        <plugins>
-            <plugin>
-                <artifactId>maven-compiler-plugin</artifactId>
-                <executions>
-                    <execution>
-                        <id>extensions</id>
-                        <phase>generate-sources</phase>
-                        <goals>
-                            <goal>compile</goal>
-                        </goals>
-                        <configuration>
-                            <proc>none</proc>
-                            <failOnError>false</failOnError>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
-        </plugins>
-    </build>
 </project>
