@@ -24,5 +24,5 @@ public interface PropertyDescriptor {
 
     Iterable<QualifierMetadata.Entry> getExtensions();
 
-    default boolean isBean() { return getName().equals(SELF); }
+    default boolean isProperty() { return !getName().equals(SELF); }
 }

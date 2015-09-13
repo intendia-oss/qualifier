@@ -14,11 +14,11 @@ public class SimpleProcessorExtensionTest {
     @Test
     public void test_processor_extensions_are_executed() {
         final Object expectedType = SimpleInnerInterface.class;
-        assertNotNull(SimpleModelMetadata.simpleValue().getContext().get("simple.loaded"));
-        assertEquals(1, SimpleModelMetadata.simpleValue().getContext().get("simple.getInteger"));
-        assertEquals("s", SimpleModelMetadata.simpleValue().getContext().get("simple.getString"));
-        assertEquals(expectedType, SimpleModelMetadata.simpleValue().getContext().get("simple.getType"));
-        assertEquals(Object.class, SimpleModelMetadata.simpleValue().getContext().get("simple.getLiteral").getClass());
+        assertNotNull(             SimpleModel__.simpleValue.getContext().get("simple.loaded"));
+        assertEquals(1,            SimpleModel__.simpleValue.getContext().get("simple.getInteger"));
+        assertEquals("s",          SimpleModel__.simpleValue.getContext().get("simple.getString"));
+        assertEquals(expectedType, SimpleModel__.simpleValue.getContext().get("simple.getType"));
+        assertEquals(Object.class, SimpleModel__.simpleValue.getContext().get("simple.getLiteral").getClass());
     }
 
     @Test

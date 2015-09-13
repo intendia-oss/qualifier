@@ -1,7 +1,6 @@
 package com.intendia.qualifier;
 
 import java.util.Comparator;
-import java.util.Map;
 import javax.annotation.Nullable;
 
 /**
@@ -11,11 +10,11 @@ import javax.annotation.Nullable;
  * @param <V> the type of the destination value
  * @param <U> the type of the origin value
  */
-class PathQualifier<T, V, U> implements Qualifier<T, V> {
-    private final Qualifier<T, U> parent;
-    private final Qualifier<? super U, V> child;
+public class PathQualifier<T, V, U> implements PropertyQualifier<T, V> {
+    private final PropertyQualifier<T, U> parent;
+    private final PropertyQualifier<? super U, V> child;
 
-    public PathQualifier(Qualifier<T, U> parent, Qualifier<? super U, V> child) {
+    public PathQualifier(PropertyQualifier<T, U> parent, PropertyQualifier<? super U, V> child) {
         this.parent = parent;
         this.child = child;
     }
@@ -44,9 +43,9 @@ class PathQualifier<T, V, U> implements Qualifier<T, V> {
                 o2 == null ? null : parent.get(o2));
     }
 
-    @Override public <ValueV> Qualifier<T, ValueV> as(Qualifier<? super V, ValueV> property) {
-        return new PathQualifier<>(this, property);
-    }
+//    @Override public <ValueV> PropertyQualifier<T, ValueV> as(PropertyQualifier<? super V, ValueV> property) {
+//        return new PathQualifier<>(this, property);
+//    }
 
-    @Override public Map<String, Object> getContext() { return child.getContext(); }
+    @Override public Metadata getContext() { return child.getContext(); }
 }

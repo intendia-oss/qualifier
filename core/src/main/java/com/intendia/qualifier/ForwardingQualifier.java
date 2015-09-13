@@ -2,7 +2,6 @@ package com.intendia.qualifier;
 
 import com.google.common.collect.ForwardingObject;
 import java.util.Comparator;
-import java.util.Map;
 import javax.annotation.Nullable;
 
 /**
@@ -10,12 +9,12 @@ import javax.annotation.Nullable;
  * to modify the behavior of the backing qualifier as desired per the <a href="http://en.wikipedia.org/wiki/Decorator_pattern">decorator
  * pattern</a>.
  */
-public abstract class ForwardingQualifier<T, V> extends ForwardingObject implements Qualifier<T, V> {
+public abstract class ForwardingQualifier<T, V> extends ForwardingObject implements PropertyQualifier<T, V> {
 
     /** Constructor for use by subclasses. */
     protected ForwardingQualifier() {}
 
-    @Override protected abstract Qualifier<T, V> delegate();
+    @Override protected abstract PropertyQualifier<T, V> delegate();
 
     @Override public Class<?>[] getGenerics() { return delegate().getGenerics(); }
 
@@ -29,7 +28,7 @@ public abstract class ForwardingQualifier<T, V> extends ForwardingObject impleme
 
     @Override public void set(T object, V value) { delegate().set(object, value); }
 
-    @Override public <U> Qualifier<T, U> as(Qualifier<? super V, U> property) { return delegate().as(property); }
+//    @Override public <U> PropertyQualifier<T, U> as(PropertyQualifier<? super V, U> property) { return delegate().as(property); }
 
     @Override public Comparator<? super T> getComparator() { return delegate().getComparator(); }
 
@@ -37,5 +36,5 @@ public abstract class ForwardingQualifier<T, V> extends ForwardingObject impleme
 
     @Override public Class<V> getType() { return delegate().getType(); }
 
-    @Override public Map<String, Object> getContext() { return delegate().getContext(); }
+    @Override public Metadata getContext() { return delegate().getContext(); }
 }

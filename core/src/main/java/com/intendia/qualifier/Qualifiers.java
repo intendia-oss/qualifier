@@ -7,11 +7,11 @@ public final class Qualifiers {
 
     private Qualifiers() {}
 
-    public static String getString(Qualifier<?, ?> qualifier, String extensionName) {
+    public static String getString(Qualifier<?> qualifier, String extensionName) {
         return (String) qualifier.getContext().get(extensionName);
     }
 
-    public static String getString(Qualifier<?, ?> qualifier, String extensionName, String defaultValue) {
+    public static String getString(Qualifier<?> qualifier, String extensionName, String defaultValue) {
         return firstNonNull(getString(qualifier, extensionName), defaultValue);
     }
 }

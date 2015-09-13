@@ -12,7 +12,6 @@ import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.joining;
 import static javax.lang.model.element.ElementKind.CLASS;
 import static javax.lang.model.element.ElementKind.INTERFACE;
-import static javax.lang.model.element.Modifier.ABSTRACT;
 import static javax.lang.model.element.Modifier.FINAL;
 import static javax.lang.model.element.Modifier.PRIVATE;
 import static javax.lang.model.element.Modifier.PUBLIC;
@@ -34,8 +33,8 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
-import com.intendia.qualifier.BaseQualifier;
-import com.intendia.qualifier.BeanQualifier;
+import com.intendia.qualifier.Metadata;
+import com.intendia.qualifier.PropertyQualifier;
 import com.intendia.qualifier.Qualifier;
 import com.intendia.qualifier.annotation.Qualify;
 import com.intendia.qualifier.annotation.QualifyExtension;
@@ -169,12 +168,10 @@ public class StaticQualifierMetamodelProcessor extends AbstractProcessor impleme
 
         ToStringHelper diagnostic = MoreObjects.toStringHelper(metamodelName.simpleName());
 
-        // public abstract class BeanClass extends BaseQualifier<> implements BeanQualifier<>
+        // public abstract class BeanClass extends BaseQualifier<> implements SimpleQualifier<>
         final TypeSpec.Builder container = TypeSpec.classBuilder(metamodelName.simpleName())
                 .addOriginatingElement(beanElement)
-                .addModifiers(PUBLIC, ABSTRACT)
-                .superclass(qualifierBase(beanClassName, beanClassName))
-                .addSuperinterface(ParameterizedTypeName.get(ClassName.get(BeanQualifier.class), beanClassName))
+                .addModifiers(PUBLIC, FINAL)
                 .addAnnotation(AnnotationSpec.builder(SuppressWarnings.class)
                         .addMember("value", "$S", "unused")
                         .build())
@@ -197,7 +194,7 @@ public class StaticQualifierMetamodelProcessor extends AbstractProcessor impleme
 
         // Emit qualifiers for each bean property
         for (PropertyDescriptor qualifier : qualifiers) {
-            emitQualifier(container, diagnostic, metamodelName, qualifier);
+            emitQualifier(container, diagnostic, qualifier);
         }
 
         // All qualifiers instance
@@ -207,7 +204,9 @@ public class StaticQualifierMetamodelProcessor extends AbstractProcessor impleme
             final TypeName mapType = ParameterizedTypeName.get(ClassName.get(Map.class), keyType, valueType);
             container.addField(FieldSpec.builder(mapType, "qualifiers", PUBLIC, STATIC, FINAL)
                     .initializer("$[$T\n.<$T,$T>builder()\n$L\n.build()$]", ImmutableMap.class, keyType, valueType,
-                            qualifiers.stream().map(p -> format(".put(%1$s.getName(), %1$s)", toLower(p.getName())))
+                            qualifiers.stream()
+                                    .filter(PropertyDescriptor::isProperty)
+                                    .map(p -> format(".put(%1$s.getName(), %1$s)", toLower(p.getName())))
                                     .collect(joining("\n")))
                     .build());
         }
@@ -217,67 +216,64 @@ public class StaticQualifierMetamodelProcessor extends AbstractProcessor impleme
         JavaFile.builder(beanHelper.getPackageName(), container.build()).build().writeTo(processingEnv.getFiler());
     }
 
-    private void emitQualifier(TypeSpec.Builder writer, ToStringHelper diagnostic, ClassName metamodelName,
-            PropertyDescriptor descriptor) {
+    private void emitQualifier(TypeSpec.Builder writer, ToStringHelper diagnostic, PropertyDescriptor descriptor) {
 
-        // ex. Person
-        final TypeName beanType = TypeName.get(descriptor.getBeanElement().asType());
-        final ClassName beanClassName = ClassName.get(descriptor.getBeanElement());
+        // Bean ex. ref: person, name: self, type: Person
+        ClassName beanType = ClassName.get(descriptor.getBeanElement());
 
-        // ex. ref: person.address, name: address, type: Address
-        final String propertyName = toLower(descriptor.getName());
-        final TypeName propertyType = TypeName.get(descriptor.getPropertyType());
-        final TypeName propertyRawType = TypeName.get(types().erasure(descriptor.getPropertyType()));
+        // Property ex. ref: person.address, name: address, type: Address
+        String propertyName = toLower(descriptor.getName());
+        TypeName propertyType = TypeName.get(descriptor.getPropertyType());
+        TypeName propertyRawType = TypeName.get(types().erasure(descriptor.getPropertyType()));
 
         // the qualifier representing the property, ex. PersonAddress
-        final String qualifierClass = beanClassName.simpleName() + toUpper(propertyName);
-        final TypeName qualifierClassName = ClassName.get(beanClassName.packageName(), qualifierClass);
+        ClassName qualifierType = ClassName.get(beanType.packageName(), beanType.simpleName() + toUpper(propertyName));
 
         diagnostic.add(propertyName, propertyType);
 
         // Property field and class
 
-        final DeclaredType extendsType = types().getDeclaredType(typeElementFor(BaseQualifier.class),
-                descriptor.getBeanElement().asType(),
-                descriptor.getPropertyType());
+        final TypeName extendsType = descriptor.isProperty()
+                ? ParameterizedTypeName.get(ClassName.get(PropertyQualifier.class), beanType, propertyType)
+                : ParameterizedTypeName.get(ClassName.get(Qualifier.class), beanType);
 
         // public static final PersonAddress address = new PersonAddress();
-        writer.addField(FieldSpec.builder(qualifierClassName, propertyName, PUBLIC, STATIC, FINAL)
-                .initializer("new $T()", qualifierClassName)
+        writer.addField(FieldSpec.builder(qualifierType, propertyName, PUBLIC, STATIC, FINAL)
+                .initializer("new $T()", qualifierType)
                 .build());
 
         // public final static PersonSelf PersonMetadata = self;
         final String selfReference = PropertyDescriptor.SELF;
-        if (descriptor.isBean()) {
-            final String metadata = beanClassName.simpleName() + "Metadata";
-            writer.addField(FieldSpec.builder(qualifierClassName, metadata, PUBLIC, STATIC, FINAL)
+        if (!descriptor.isProperty()) {
+            final String metadata = beanType.simpleName() + "Metadata";
+            writer.addField(FieldSpec.builder(qualifierType, metadata, PUBLIC, STATIC, FINAL)
                     .initializer(PropertyDescriptor.SELF)
                     .build());
         }
 
         // public PersonAddress address(){ return self.as(address); }
-        if (!descriptor.isBean() && !RESERVED_PROPERTIES.contains(propertyName)) {
-            writer.addMethod(MethodSpec.methodBuilder(propertyName)
-                    .addModifiers(PUBLIC, STATIC)
-                    .returns(qualifierType(beanClassName, propertyType))
-                    .addStatement("return $N.as($N)", selfReference, propertyName)
-                    .build());
-        }
+//        if (!!descriptor.isProperty() && !RESERVED_PROPERTIES.contains(propertyName)) {
+//            writer.addMethod(MethodSpec.methodBuilder(propertyName)
+//                    .addModifiers(PUBLIC, STATIC)
+//                    .returns(qualifierType(beanType, propertyType))
+//                    .addStatement("return $N.as($N)", selfReference, propertyName)
+//                    .build());
+//        }
 
         // public static final class PersonAddress extends BaseQualifier<Person,Address> {
-        final TypeSpec.Builder property = TypeSpec.classBuilder(qualifierClass)
+        final TypeSpec.Builder qualifier = TypeSpec.classBuilder(qualifierType.simpleName())
                 .addModifiers(PUBLIC, STATIC, FINAL)
-                .superclass(descriptor.isBean() ? metamodelName : TypeName.get(extendsType));
+                .addSuperinterface(extendsType);
 
         // Property name
-        property.addMethod(MethodSpec.methodBuilder("getName")
+        qualifier.addMethod(MethodSpec.methodBuilder("getName")
                 .addModifiers(PUBLIC)
                 .returns(LANG_STRING)
                 .addStatement("return $S", propertyName)
                 .build());
 
         // Property type
-        property.addMethod(MethodSpec.methodBuilder("getType")
+        qualifier.addMethod(MethodSpec.methodBuilder("getType")
                 .addModifiers(PUBLIC)
                 .returns(ParameterizedTypeName.get(LANG_CLASS, propertyType))
                 .addStatement("return (Class) $T.class", propertyRawType)
@@ -286,7 +282,7 @@ public class StaticQualifierMetamodelProcessor extends AbstractProcessor impleme
         // Property generics
         final List<? extends TypeMirror> typeArguments = descriptor.getPropertyType().getTypeArguments();
         if (!typeArguments.isEmpty()) {
-            property.addMethod(MethodSpec.methodBuilder("getGenerics")
+            qualifier.addMethod(MethodSpec.methodBuilder("getGenerics")
                     .addModifiers(PUBLIC)
                     .returns(ArrayTypeName.of(ParameterizedTypeName.get(LANG_CLASS, WILDCARD)))
                     .addStatement("return new Class<?>[]{$L}", typeArguments.stream()
@@ -310,10 +306,10 @@ public class StaticQualifierMetamodelProcessor extends AbstractProcessor impleme
                 getMethod.addStatement("return $T.$N(object)", categoryName, getter.getSimpleName());
 
             }
-            property.addMethod(getMethod.build());
+            qualifier.addMethod(getMethod.build());
 
             // isReadable()
-            property.addMethod(MethodSpec.methodBuilder("isReadable")
+            qualifier.addMethod(MethodSpec.methodBuilder("isReadable")
                     .addModifiers(PUBLIC)
                     .returns(TypeName.BOOLEAN.box())
                     .addStatement("return true")
@@ -334,10 +330,10 @@ public class StaticQualifierMetamodelProcessor extends AbstractProcessor impleme
                 getMethod.addStatement("$T.$N(object, value)", categoryName, setter.getSimpleName());
 
             }
-            property.addMethod(getMethod.build());
+            qualifier.addMethod(getMethod.build());
 
             // isWritable()
-            property.addMethod(MethodSpec.methodBuilder("isWritable")
+            qualifier.addMethod(MethodSpec.methodBuilder("isWritable")
                     .addModifiers(PUBLIC)
                     .returns(TypeName.BOOLEAN.box())
                     .addStatement("return true")
@@ -345,21 +341,21 @@ public class StaticQualifierMetamodelProcessor extends AbstractProcessor impleme
         }
 
         // Property self
-        if (descriptor.isBean()) {
+        if (!descriptor.isProperty()) {
             // get()
-            property.addMethod(MethodSpec.methodBuilder("get")
+            qualifier.addMethod(MethodSpec.methodBuilder("get")
                     .addModifiers(PUBLIC)
                     .returns(propertyType)
                     .addParameter(beanType, "object")
                     .addStatement("return object")
                     .build());
 
-            // Methods of BeanQualifier
+            // Methods of SimpleQualifier
 
             // public Set<Qualifier<? super QualifiedClass, ?>> getPropertyQualifiers() {
             final ParameterizedTypeName propertySetType = ParameterizedTypeName.get(ClassName.get(Set.class),
                     qualifierType(WildcardTypeName.supertypeOf(propertyType), WILDCARD));
-            property.addMethod(MethodSpec.methodBuilder("getPropertyQualifiers")
+            qualifier.addMethod(MethodSpec.methodBuilder("getPropertyQualifiers")
                     .addModifiers(PUBLIC)
                     .returns(propertySetType)
                     .addStatement("final $T filtered = $T.newIdentityHashSet()",
@@ -374,10 +370,10 @@ public class StaticQualifierMetamodelProcessor extends AbstractProcessor impleme
                 .filter(QualifierProcessorExtension::processable)
                 .forEach(extension -> {
                     try {
-                        extension.processProperty(property, descriptor);
+                        extension.processProperty(qualifier, descriptor);
                     } catch (Throwable e) {
                         printError(format("Processor %s fail processing property %s.%s, cause: %s\n%s",
-                                extension.getClass().getSimpleName(), beanClassName.simpleName(), propertyName,
+                                extension.getClass().getSimpleName(), beanType.simpleName(), propertyName,
                                 getCausalChain(e).stream()
                                         .map(Throwable::getLocalizedMessage)
                                         .collect(joining(", caused by ")),
@@ -388,17 +384,18 @@ public class StaticQualifierMetamodelProcessor extends AbstractProcessor impleme
         // Property context
         StringBuilder sb = new StringBuilder();
         for (QualifierMetadata.Entry extension : descriptor.getExtensions()) { // add extensions
-            sb.append(format("\n.put(\"%s\", %s)", extension.getKey(), extension.toLiteral()));
+            sb.append(format("\ncase \"%s\": return %s;", extension.getKey(), extension.toLiteral()));
         }
+        sb.append("\ndefault: return null;");
 
-        property.addMethod(MethodSpec.methodBuilder("getContext")
+        final ClassName metadataClassName = ClassName.get(Metadata.class);
+        qualifier.addMethod(MethodSpec.methodBuilder("getContext")
                 .addModifiers(PUBLIC)
-                .returns(ParameterizedTypeName
-                        .get(ClassName.get(Map.class), LANG_STRING, TypeName.OBJECT))
-                .addStatement("return ImmutableMap.<String,Object>builder()$L.build()", sb.toString())
+                .returns(metadataClassName)
+                .addStatement("return $T.readOnly(key -> { switch(key) { $L }})", metadataClassName, sb.toString())
                 .build());
 
-        writer.addType(property.build());
+        writer.addType(qualifier.build());
     }
 
     private List<QualifierProcessorExtension> getProcessorExtensions() {
@@ -561,11 +558,7 @@ public class StaticQualifierMetamodelProcessor extends AbstractProcessor impleme
     }
 
     private TypeName qualifierType(TypeName bean, TypeName property) {
-        return ParameterizedTypeName.get(ClassName.get(Qualifier.class), bean, property);
-    }
-
-    private TypeName qualifierBase(TypeName bean, TypeName property) {
-        return ParameterizedTypeName.get(ClassName.get(BaseQualifier.class), bean, property);
+        return ParameterizedTypeName.get(ClassName.get(PropertyQualifier.class), bean, property);
     }
 
     public void printDigest(String message) {
