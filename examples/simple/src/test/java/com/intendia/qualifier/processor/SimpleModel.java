@@ -8,6 +8,7 @@ import java.util.concurrent.TimeUnit;
 
 @Qualify(extend = {
         @QualifyExtension(key = "extension.string", type = String.class, value = "string value"),
+        @QualifyExtension(key = "extension.boolean", type = Boolean.class, value = "true"),
         @QualifyExtension(key = "extension.int", type = Integer.class, value = "1"),
         @QualifyExtension(key = "extension.valueOf", type = TimeUnit.class, value = "SECONDS"),
         @QualifyExtension(key = "extension.class", type = Class.class, value = "java.lang.String"),

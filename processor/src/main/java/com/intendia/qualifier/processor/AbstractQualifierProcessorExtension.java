@@ -100,16 +100,16 @@ public abstract class AbstractQualifierProcessorExtension implements QualifierPr
             this.annotation = aClass;
         }
 
-        @Override public QualifierMetadata getMetadata() { return context; }
+        @Override public QualifierMetadata metadata() { return context; }
 
-        @Override public Element getAnnotatedElement() { return annotatedElement; }
+        @Override public Element annotatedElement() { return annotatedElement; }
 
-        @Override public AnnotationMirror getAnnotationMirror() { return annotationMirror; }
+        @Override public AnnotationMirror annotationMirror() { return annotationMirror; }
 
-        @Override public AnnotationValue getAnnotationValue(String elementName) {
+        @Override public AnnotationValue annotationValue(String elementName) {
             return AnnotationMirrors.getAnnotationValue(annotationMirror, elementName);
         }
 
-        @Override public A getAnnotation() { return annotation; }
+        @Override public A annotation() { return annotation; }
     }
 }

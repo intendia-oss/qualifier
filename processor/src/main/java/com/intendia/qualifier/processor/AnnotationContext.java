@@ -7,13 +7,15 @@ import javax.lang.model.element.AnnotationValue;
 import javax.lang.model.element.Element;
 
 public interface AnnotationContext<A extends Annotation> {
-    A getAnnotation();
 
-    AnnotationMirror getAnnotationMirror();
+    A annotation();
 
-    AnnotationValue getAnnotationValue(String elementName);
+    AnnotationMirror annotationMirror();
 
-    Element getAnnotatedElement();
+    AnnotationValue annotationValue(String elementName);
 
-    QualifierMetadata getMetadata();
+    Element annotatedElement();
+
+    QualifierMetadata metadata();
+
 }

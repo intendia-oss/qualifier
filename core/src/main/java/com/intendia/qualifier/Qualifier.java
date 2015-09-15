@@ -4,26 +4,25 @@ package com.intendia.qualifier;
 import static com.google.common.base.MoreObjects.firstNonNull;
 
 import com.google.common.collect.Ordering;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.Set;
 import javax.annotation.Nullable;
 
 @FunctionalInterface
 public interface Qualifier<V> {
-    String CORE_NAME = "core.name";
-    String CORE_PATH = "core.path";
-    String CORE_TYPE = "core.type";
-    String CORE_GENERICS = "core.generics";
+    Extension<String> CORE_NAME = Extension.key("core.name");
+    Extension<String> CORE_PATH = Extension.key("core.path");
+    Extension<Class<?>> CORE_TYPE = Extension.key("core.type");
+    Extension<Class<?>[]> CORE_GENERICS = Extension.key("core.generics");
 
-    default String getName() { return (String) getContext().get(CORE_NAME); }
+    default String getName() { return getContext().get(CORE_NAME); }
 
-    default String getPath() { return (String) getContext().get(CORE_PATH); }
+    default String getPath() { return getContext().get(CORE_PATH); }
 
-    @SuppressWarnings({ "unchecked", "rawtypes" })
-    default Class<V> getType() { return (Class) getContext().get(CORE_TYPE); }
+    default Class<V> getType() { return getContext().get(CORE_TYPE.as()); }
 
-    default Class<?>[] getGenerics() { return (Class<?>[]) getContext().get(CORE_GENERICS); }
+    default Class<?>[] getGenerics() { return getContext().get(CORE_GENERICS); }
 
     default Comparator<V> getComparator1() { return Ordering.usingToString().nullsFirst(); }
 
@@ -31,13 +30,13 @@ public interface Qualifier<V> {
     Metadata getContext(); // { return Metadata.EMPTY; }
 
     @SuppressWarnings("unchecked")
-    default @Nullable <T> T data(String key) { return (T) getContext().get(key); }
+    default @Nullable <T> T data(Extension<T> key) { return getContext().get(key); }
 
     @SuppressWarnings("unchecked")
-    default <T> T data(String key, T or) { return firstNonNull((T) getContext().get(key), or); }
+    default <T> T data(Extension<T> key, T or) { return firstNonNull(getContext().get(key), or); }
 
     /** Return the property qualifiers of the bean qualifier. */
-    default Set<PropertyQualifier<? super V, ?>> getPropertyQualifiers() { return Collections.emptySet(); }
+    default Collection<PropertyQualifier<V, ?>> getPropertyQualifiers() { return Collections.emptySet(); }
 
     /**
      * @deprecated created to easy fix self usages in TableBuilder columns, but! this is not required if Paths and

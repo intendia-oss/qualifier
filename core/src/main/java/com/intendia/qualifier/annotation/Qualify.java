@@ -13,14 +13,7 @@ import java.lang.annotation.Target;
 @Target({ ElementType.TYPE, ElementType.METHOD, ElementType.FIELD })
 public @interface Qualify {
 
-    /** (Optional) Override the property name (e.g. 'userLogo'). Defaults to the property name. */
-    String name() default "";
-
-    /** (Optional) The type of the property (e.g. Number.class). Defaults to property type. */
-    Class<?> type() default Default.class;
-
     /** (Optional) An array of <code>QualifyExtension</code> annotations. */
     QualifyExtension[] extend() default {};
 
-    class Default {}
 }

@@ -20,9 +20,9 @@ public interface PropertyDescriptor {
 
     @Nullable ExecutableElement getSetterElement();
 
-    QualifierMetadata getMetadata();
+    QualifierMetadata metadata();
 
-    Iterable<QualifierMetadata.Entry> getExtensions();
+    Iterable<QualifierMetadata.Entry<?>> getExtensions();
 
     default boolean isProperty() { return !getName().equals(SELF); }
 }
