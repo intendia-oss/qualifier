@@ -8,6 +8,7 @@ import static org.junit.Assert.assertNotNull;
 
 import com.intendia.qualifier.Extension;
 import com.intendia.qualifier.Qualifier;
+import com.intendia.qualifier.processor.SimpleModel.Color;
 import com.intendia.qualifier.processor.SimpleModel.SimpleInnerInterface;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -28,7 +29,8 @@ public class SimpleProcessorExtensionTest {
         assertEquals("string value", q.data(Extension.<String>key("extension.string")));
         assertEquals(true, q.data(Extension.<Boolean>key("extension.boolean")));
         assertEquals(Integer.valueOf(1), q.data(Extension.<Integer>key("extension.int")));
-        assertEquals(TimeUnit.SECONDS, q.data(Extension.<TimeUnit>key("extension.valueOf")));
+        assertEquals(TimeUnit.SECONDS, q.data(Extension.<TimeUnit>key("extension.enum")));
+        assertEquals(Color.valueOf("red"), q.data(Extension.<TimeUnit>key("extension.valueOf")));
         assertEquals(String.class, q.data(Extension.<Class<?>>key("extension.class")));
     }
 

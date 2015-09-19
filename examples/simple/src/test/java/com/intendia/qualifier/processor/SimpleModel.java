@@ -4,6 +4,7 @@ import com.google.common.base.Predicate;
 import com.intendia.qualifier.annotation.Qualify;
 import com.intendia.qualifier.annotation.QualifyExtension;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
 @Qualify(extend = {
@@ -21,8 +22,8 @@ public interface SimpleModel {
 
     @Qualify class SimpleInner {}
 
-    @Qualify @Simple(getString = "s", getType = SimpleInnerInterface.class, getInteger = 1)
-    interface SimpleDependant extends Predicate<SimpleInnerInterface> {}
+    @Qualify @Simple(getString = "s", getType = SimpleInnerInterface.class, getInteger = 1) interface SimpleDependant
+            extends Predicate<SimpleInnerInterface> {}
 
     @Qualify interface SimpleInnerInterface {
         List<String> getVehicleParam();
@@ -36,6 +37,12 @@ public interface SimpleModel {
         public Color(String color) { this.color = color; }
 
         public String getColor() { return color; }
+
+        @Override public boolean equals(Object o) { return this == o || o instanceof Color && equals((Color) o); }
+
+        public boolean equals(Color o) { return Objects.equals(color, o.color); }
+
+        @Override public int hashCode() { return Objects.hash(color); }
 
         public static Color valueOf(String color) { return new Color(color); }
     }
