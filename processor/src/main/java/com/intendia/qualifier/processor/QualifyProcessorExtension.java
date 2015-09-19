@@ -98,13 +98,15 @@ public class QualifyProcessorExtension extends AbstractQualifierProcessorExtensi
 
         // Property generics
         final List<? extends TypeMirror> typeArguments = descriptor.getPropertyType().getTypeArguments();
-        writer.addMethod(MethodSpec.methodBuilder("getGenerics")
-                .addModifiers(PUBLIC)
-                .returns(ArrayTypeName.of(ParameterizedTypeName.get(LANG_CLASS, WILDCARD)))
-                .addStatement("return new Class<?>[]{$L}", typeArguments.isEmpty() ? "" : typeArguments.stream()
-                        .map(t -> t.getKind() == TypeKind.WILDCARD ? "null" : t + ".class")
-                        .collect(joining(",")))
-                .build());
-        descriptor.metadata().put(CORE_GENERICS).valueBlock("getGenerics()");
+        if (!typeArguments.isEmpty()) {
+            writer.addMethod(MethodSpec.methodBuilder("getGenerics")
+                    .addModifiers(PUBLIC)
+                    .returns(ArrayTypeName.of(ParameterizedTypeName.get(LANG_CLASS, WILDCARD)))
+                    .addStatement("return new Class<?>[]{$L}", typeArguments.stream()
+                            .map(t -> t.getKind() == TypeKind.WILDCARD ? "null" : t + ".class")
+                            .collect(joining(",")))
+                    .build());
+            descriptor.metadata().put(CORE_GENERICS).valueBlock("getGenerics()");
+        }
     }
 }

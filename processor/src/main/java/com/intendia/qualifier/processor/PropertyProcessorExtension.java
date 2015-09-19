@@ -1,7 +1,7 @@
 // Copyright 2015 Intendia, SL.
 package com.intendia.qualifier.processor;
 
-import static com.intendia.qualifier.Qualifier.CORE_PATH;
+import static com.intendia.qualifier.PropertyQualifier.PROPERTY_PATH;
 import static javax.lang.model.element.Modifier.PUBLIC;
 
 import com.intendia.qualifier.PropertyQualifier;
@@ -33,7 +33,7 @@ public class PropertyProcessorExtension extends AbstractQualifierProcessorExtens
                 .returns(LANG_STRING)
                 .addStatement("return getName()")
                 .build());
-        descriptor.metadata().put(CORE_PATH).valueBlock("$L()", "getPath");
+        descriptor.metadata().put(PROPERTY_PATH).valueBlock("$L()", "getPath");
 
         // Property getter
         final ExecutableElement getter = descriptor.getGetterElement();

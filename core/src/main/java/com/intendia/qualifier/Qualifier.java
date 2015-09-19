@@ -3,7 +3,6 @@ package com.intendia.qualifier;
 
 import static com.google.common.base.MoreObjects.firstNonNull;
 
-import com.google.common.collect.Ordering;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
@@ -12,19 +11,15 @@ import javax.annotation.Nullable;
 @FunctionalInterface
 public interface Qualifier<V> {
     Extension<String> CORE_NAME = Extension.key("core.name");
-    Extension<String> CORE_PATH = Extension.key("core.path");
     Extension<Class<?>> CORE_TYPE = Extension.key("core.type");
     Extension<Class<?>[]> CORE_GENERICS = Extension.key("core.generics");
+    Class<?>[] NO_GENERICS = new Class[0];
 
-    default String getName() { return getContext().get(CORE_NAME); }
+    default String getName() { return data(CORE_NAME); }
 
-    default String getPath() { return getContext().get(CORE_PATH); }
+    default Class<V> getType() { return data(CORE_TYPE.as()); }
 
-    default Class<V> getType() { return getContext().get(CORE_TYPE.as()); }
-
-    default Class<?>[] getGenerics() { return getContext().get(CORE_GENERICS); }
-
-    default Comparator<V> getComparator1() { return Ordering.usingToString().nullsFirst(); }
+    default Class<?>[] getGenerics() { return data(CORE_GENERICS, NO_GENERICS); }
 
     /** Return the properties context of this qualifier. */
     Metadata getContext(); // { return Metadata.EMPTY; }
@@ -55,7 +50,7 @@ public interface Qualifier<V> {
 
             @Override public Boolean isReadable() { return true; }
 
-            @Override public Comparator<? super V> getComparator() { return self.getComparator1(); }
+            @Override public Comparator<? super V> getComparator() { return ComparableQualifier.of(self).getOrdering(); }
         };
     }
 
