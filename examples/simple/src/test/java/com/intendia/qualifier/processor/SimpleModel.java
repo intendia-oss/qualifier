@@ -10,7 +10,8 @@ import java.util.concurrent.TimeUnit;
         @QualifyExtension(key = "extension.string", type = String.class, value = "string value"),
         @QualifyExtension(key = "extension.boolean", type = Boolean.class, value = "true"),
         @QualifyExtension(key = "extension.int", type = Integer.class, value = "1"),
-        @QualifyExtension(key = "extension.valueOf", type = TimeUnit.class, value = "SECONDS"),
+        @QualifyExtension(key = "extension.enum", type = TimeUnit.class, value = "SECONDS"),
+        @QualifyExtension(key = "extension.valueOf", type = SimpleModel.Color.class, value = "red"),
         @QualifyExtension(key = "extension.class", type = Class.class, value = "java.lang.String"),
 })
 public interface SimpleModel {
@@ -27,5 +28,15 @@ public interface SimpleModel {
         List<String> getVehicleParam();
 
         void setVehicleParam(List<String> vehicleParam);
+    }
+
+    class Color {
+        private final String color;
+
+        public Color(String color) { this.color = color; }
+
+        public String getColor() { return color; }
+
+        public static Color valueOf(String color) { return new Color(color); }
     }
 }

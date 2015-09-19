@@ -8,6 +8,6 @@ public interface ComparableQualifier<T> extends Qualifier<T> {
     default Ordering<T> getOrdering() { return Ordering.usingToString().nullsFirst(); }
 
     static <T> ComparableQualifier<T> of(Qualifier<T> q) {
-        return q instanceof ComparableQualifier ? (ComparableQualifier<T>) q : q::getContext;
+        return q instanceof ComparableQualifier ? (ComparableQualifier<T>) q : q::data;
     }
 }

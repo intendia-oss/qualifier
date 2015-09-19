@@ -30,7 +30,6 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 import com.intendia.qualifier.Extension;
-import com.intendia.qualifier.Metadata;
 import com.intendia.qualifier.PropertyQualifier;
 import com.intendia.qualifier.Qualifier;
 import com.intendia.qualifier.annotation.Qualify;
@@ -288,14 +287,14 @@ public class StaticQualifierMetamodelProcessor extends AbstractProcessor impleme
         }
         entries.add("default: return null;\n");
 
-        final ClassName metadataClassName = ClassName.get(Metadata.class);
-        qualifier.addMethod(MethodSpec.methodBuilder("getContext")
+        qualifier.addMethod(MethodSpec.methodBuilder("data")
                 .addModifiers(PUBLIC)
-                .returns(metadataClassName)
+                .returns(Object.class)
+                .addParameter(LANG_STRING, "key")
                 .addCode(CodeBlock.builder()
-                        .add("return $T.readOnly(key -> { switch(key) {$>\n", metadataClassName)
+                        .add("switch(key) {$>\n")
                         .add(entries.build())
-                        .add("$<}});\n").build())
+                        .add("$<}\n").build())
                 .build());
 
         writer.addType(qualifier.build());
@@ -533,6 +532,7 @@ public class StaticQualifierMetamodelProcessor extends AbstractProcessor impleme
             Entry<T> entry = put(Extension.key(key), typeMirror);
             if (value != null) entry.value(value);
             else if (Class.class.equals(type)) entry.valueBlock("$T.class", ClassName.bestGuess(str));
+            else entry.valueBlock("$T.valueOf($S)", typeMirror, str);
             return entry;
         }
 

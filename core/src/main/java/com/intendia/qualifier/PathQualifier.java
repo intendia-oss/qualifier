@@ -19,6 +19,8 @@ public class PathQualifier<T, V, U> implements PropertyQualifier<T, V> {
         this.child = child;
     }
 
+    @Nullable @Override public Object data(String key) { return child.data(key); }
+
     @Override public String getName() { return child.getName(); }
 
     @Override public String getPath() { return parent.getPath() + "." + child.getPath(); }
@@ -42,10 +44,4 @@ public class PathQualifier<T, V, U> implements PropertyQualifier<T, V> {
                 o1 == null ? null : parent.get(o1),
                 o2 == null ? null : parent.get(o2));
     }
-
-//    @Override public <ValueV> PropertyQualifier<T, ValueV> as(PropertyQualifier<? super V, ValueV> property) {
-//        return new PathQualifier<>(this, property);
-//    }
-
-    @Override public Metadata getContext() { return child.getContext(); }
 }

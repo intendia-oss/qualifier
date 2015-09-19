@@ -15,23 +15,27 @@ public interface Qualifier<V> {
     Extension<Class<?>[]> CORE_GENERICS = Extension.key("core.generics");
     Class<?>[] NO_GENERICS = new Class[0];
 
+    // Metadata access
+
+    @Nullable Object data(String key);
+
+    @SuppressWarnings("unchecked")
+    default @Nullable <T> T data(Extension<T> key) { return (T) data(key.getKey()); }
+
+    default <T> T data(Extension<T> key, T or) { return firstNonNull(data(key), or); }
+
+    // Static typed metadata
+
     default String getName() { return data(CORE_NAME); }
 
     default Class<V> getType() { return data(CORE_TYPE.as()); }
 
     default Class<?>[] getGenerics() { return data(CORE_GENERICS, NO_GENERICS); }
 
-    /** Return the properties context of this qualifier. */
-    Metadata getContext(); // { return Metadata.EMPTY; }
-
-    @SuppressWarnings("unchecked")
-    default @Nullable <T> T data(Extension<T> key) { return getContext().get(key); }
-
-    @SuppressWarnings("unchecked")
-    default <T> T data(Extension<T> key, T or) { return firstNonNull(getContext().get(key), or); }
-
     /** Return the property qualifiers of the bean qualifier. */
     default Collection<PropertyQualifier<V, ?>> getPropertyQualifiers() { return Collections.emptySet(); }
+
+    default Metadata getContext() { return Metadata.readOnly(this::data); }
 
     /**
      * @deprecated created to easy fix self usages in TableBuilder columns, but! this is not required if Paths and
@@ -40,11 +44,11 @@ public interface Qualifier<V> {
      * wrong! Another way of seen this situation is; why does you need to explain to some one (ex. TableBuilder) how
      * to obtain a property to itself, ie. how to do {@code x -> x}, obviously something is wrong!
      */
-    @Deprecated
+    @SuppressWarnings("ClassReferencesSubclass") @Deprecated
     default PropertyQualifier<V, V> asProperty() {
         final Qualifier<V> self = this;
         return new PropertyQualifier<V, V>() {
-            @Override public Metadata getContext() { return self.getContext(); }
+            @Nullable @Override public Object data(String key) { return self.data(key); }
 
             @Override public @Nullable V get(V object) { return object; }
 
@@ -53,9 +57,4 @@ public interface Qualifier<V> {
             @Override public Comparator<? super V> getComparator() { return ComparableQualifier.of(self).getOrdering(); }
         };
     }
-
-    /** Traverse a qualifier returning a new qualifier which has source type this and value type property. */
-//    default <ValueU> SimpleQualifier<V> as(PropertyQualifier<? super V, ValueU> property) {
-//        return new PathQualifier<>(this, property);
-//    }
 }
