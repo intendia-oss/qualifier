@@ -10,8 +10,6 @@ import javax.annotation.Nullable;
  * pattern</a>.
  */
 public abstract class ForwardingQualifier<T, V> extends ForwardingObject implements PropertyQualifier<T, V> {
-
-    /** Constructor for use by subclasses. */
     protected ForwardingQualifier() {}
 
     @Override protected abstract PropertyQualifier<T, V> delegate();
@@ -22,19 +20,15 @@ public abstract class ForwardingQualifier<T, V> extends ForwardingObject impleme
 
     @Override public Boolean isReadable() { return delegate().isReadable(); }
 
-    @Override public @Nullable  V get(T object) { return delegate().get(object); }
+    @Override public @Nullable V get(T object) { return delegate().get(object); }
 
     @Override public Boolean isWritable() { return delegate().isWritable(); }
 
     @Override public void set(T object, V value) { delegate().set(object, value); }
-
-//    @Override public <U> PropertyQualifier<T, U> as(PropertyQualifier<? super V, U> property) { return delegate().as(property); }
 
     @Override public Comparator<? super T> getComparator() { return delegate().getComparator(); }
 
     @Override public String getName() { return delegate().getName(); }
 
     @Override public Class<V> getType() { return delegate().getType(); }
-
-    @Override public Metadata getContext() { return delegate().getContext(); }
 }

@@ -246,11 +246,12 @@ public class StaticQualifierMetamodelProcessor extends AbstractProcessor impleme
             // public Set<Qualifier<? super QualifiedClass, ?>> getPropertyQualifiers() {
             final ParameterizedTypeName propertiesType = ParameterizedTypeName.get(ClassName.get(Collection.class),
                     qualifierType(propertyType, WILDCARD));
-            qualifier.addMethod(MethodSpec.methodBuilder("getPropertyQualifiers")
+            qualifier.addMethod(MethodSpec.methodBuilder("getProperties")
                     .addModifiers(PUBLIC)
                     .returns(propertiesType)
                     .addStatement("return qualifiers.values()")
                     .build());
+            descriptor.metadata().literal(Qualifier.CORE_PROPERTIES, "getProperties()");
         }
 
         // public static final PersonAddress address = new PersonAddress();

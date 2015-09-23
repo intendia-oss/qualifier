@@ -17,11 +17,11 @@ import org.junit.Test;
 public class SimpleProcessorExtensionTest {
     @Test public void test_processor_extensions_are_executed() {
         final Object expectedType = SimpleInnerInterface.class;
-        assertNotNull(SimpleModel__.simpleValue.getContext().get("simple.loaded"));
-        assertEquals(1, SimpleModel__.simpleValue.getContext().get("simple.integer"));
-        assertEquals("s", SimpleModel__.simpleValue.getContext().get("simple.string"));
-        assertEquals(expectedType, SimpleModel__.simpleValue.getContext().get("simple.type"));
-        assertEquals("literal", SimpleModel__.simpleValue.getContext().get("simple.literal"));
+        assertNotNull(SimpleModel__.simpleValue.data("simple.loaded"));
+        assertEquals(1, SimpleModel__.simpleValue.data("simple.integer"));
+        assertEquals("s", SimpleModel__.simpleValue.data("simple.string"));
+        assertEquals(expectedType, SimpleModel__.simpleValue.data("simple.type"));
+        assertEquals("literal", SimpleModel__.simpleValue.data("simple.literal"));
     }
 
     @Test public void assert_that_qualifier_extension_works() {
@@ -30,7 +30,7 @@ public class SimpleProcessorExtensionTest {
         assertEquals(true, q.data(Extension.<Boolean>key("extension.boolean")));
         assertEquals(Integer.valueOf(1), q.data(Extension.<Integer>key("extension.int")));
         assertEquals(TimeUnit.SECONDS, q.data(Extension.<TimeUnit>key("extension.enum")));
-        assertEquals(Color.valueOf("red"), q.data(Extension.<TimeUnit>key("extension.valueOf")));
+        assertEquals(Color.valueOf("red"), q.data(Extension.<Color>key("extension.valueOf")));
         assertEquals(String.class, q.data(Extension.<Class<?>>key("extension.class")));
     }
 

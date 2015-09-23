@@ -1,19 +1,18 @@
 // Copyright 2015 Intendia, SL.
 package com.intendia.qualifier;
 
-import java.util.function.Function;
+import java.util.Objects;
+import java.util.Optional;
 import javax.annotation.Nullable;
 
+@FunctionalInterface
 public interface Metadata {
-    @Nullable Object get(String key);
+    @Nullable Object data(String key);
 
-    @SuppressWarnings("unchecked") default @Nullable <T> T get(Extension<T> key) { return (T) get(key.getKey()); }
+    @SuppressWarnings("unchecked")
+    default @Nullable <T> T data(Extension<T> key) { return (T) data(key.getKey()); }
 
-    default Metadata prototype(Metadata prototype) {
-        return key -> { Object t = this.get(key); if (t != null) return t; return prototype.get(key); };
-    }
+    default <T> T data(Extension<T> key, T or) { T v = data(key); return v != null ? v : Objects.requireNonNull(or); }
 
-    Metadata EMPTY = readOnly(key -> null);
-
-    static Metadata readOnly(Function<String, Object> metadata) { return metadata::apply; }
+    default <T> Optional<T> opt(Extension<T> key) { return Optional.ofNullable(data(key)); }
 }

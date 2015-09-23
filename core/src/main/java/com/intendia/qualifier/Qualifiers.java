@@ -8,7 +8,7 @@ public final class Qualifiers {
     private Qualifiers() {}
 
     public static String getString(Qualifier<?> qualifier, String extensionName) {
-        return (String) qualifier.getContext().get(extensionName);
+        return (String) qualifier.data(extensionName);
     }
 
     public static String getString(Qualifier<?> qualifier, String extensionName, String defaultValue) {

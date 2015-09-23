@@ -1,6 +1,8 @@
 // Copyright 2015 Intendia, SL.
 package com.intendia.qualifier;
 
+import java.util.Objects;
+
 @SuppressWarnings("unchecked")
 public interface Extension<T> {
     String getKey();
@@ -21,6 +23,14 @@ class NamedExtension<T> implements Extension<T> {
     NamedExtension(String key) { this.key = key.intern(); }
 
     @Override public String getKey() { return key; }
+
+    @Override public boolean equals(Object o) {
+        return this == o || o instanceof NamedExtension && equals((NamedExtension<?>) o);
+    }
+
+    public boolean equals(NamedExtension<?> o) { return Objects.equals(key, o.key); }
+
+    @Override public int hashCode() { return Objects.hash(key); }
 
     @Override public String toString() { return key + "@" + Integer.toHexString(hashCode()); }
 }
