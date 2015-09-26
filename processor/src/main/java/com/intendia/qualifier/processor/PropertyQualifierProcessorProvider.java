@@ -12,16 +12,16 @@ import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeSpec;
 import javax.lang.model.element.ExecutableElement;
 
-public class PropertyProcessorExtension extends AbstractQualifierProcessorExtension {
+public class PropertyQualifierProcessorProvider extends QualifierProcessorServiceProvider {
     private static final ClassName LANG_STRING = ClassName.get(String.class);
 
-    @Override public void processProperty(TypeSpec.Builder writer, PropertyDescriptor descriptor) {
+    @Override public void processProperty(TypeSpec.Builder writer, Metamodel descriptor) {
         if (!descriptor.isProperty()) return;
 
         // Bean ex. ref: person, name: self, type: Person
-        ClassName beanType = ClassName.get(descriptor.getBeanElement());
+        ClassName beanType = ClassName.get(descriptor.beanElement());
         // Property ex. ref: person.address, name: address, type: Address
-        TypeName propertyType = TypeName.get(descriptor.getPropertyType());
+        TypeName propertyType = TypeName.get(descriptor.propertyType());
 
         // extends PropertyQualifier<BeanT,PropertyT>
         writer.addSuperinterface(ParameterizedTypeName.get(
@@ -36,7 +36,7 @@ public class PropertyProcessorExtension extends AbstractQualifierProcessorExtens
         descriptor.metadata().put(PROPERTY_PATH).valueBlock("$L()", "getPath");
 
         // Property getter
-        final ExecutableElement getter = descriptor.getGetterElement();
+        final ExecutableElement getter = descriptor.getterElement();
         if (getter != null) {
             // get()
             final MethodSpec.Builder getMethod = MethodSpec.methodBuilder("get")
@@ -61,7 +61,7 @@ public class PropertyProcessorExtension extends AbstractQualifierProcessorExtens
         }
 
         // Property setter
-        final ExecutableElement setter = descriptor.getSetterElement();
+        final ExecutableElement setter = descriptor.setterElement();
         if (setter != null) {
             // set()
             final MethodSpec.Builder getMethod = MethodSpec.methodBuilder("set")

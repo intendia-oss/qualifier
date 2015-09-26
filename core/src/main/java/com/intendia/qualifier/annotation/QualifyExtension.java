@@ -1,15 +1,11 @@
 package com.intendia.qualifier.annotation;
 
-import static java.lang.annotation.ElementType.TYPE;
-import static java.lang.annotation.RetentionPolicy.RUNTIME;
+import static java.lang.annotation.RetentionPolicy.SOURCE;
 
 import java.lang.annotation.Retention;
-import java.lang.annotation.Target;
 
 /** Allow define qualifier extensions (see Qualifier Extensions). */
-@Target({ TYPE })
-@Retention(RUNTIME)
-public @interface QualifyExtension {
+@Retention(SOURCE) public @interface QualifyExtension {
 
     /** (Required) The qualifier extension key. */
     String key();

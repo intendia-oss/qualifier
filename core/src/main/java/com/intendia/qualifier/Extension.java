@@ -3,13 +3,13 @@ package com.intendia.qualifier;
 
 import java.util.Objects;
 
-@SuppressWarnings("unchecked")
 public interface Extension<T> {
     String getKey();
 
     /** Always false at run time. */
     default boolean isAnonymous() { return false; }
 
+    @SuppressWarnings("unchecked")
     default <V extends T> Extension<V> as() { return (Extension<V>) this; }
 
     static <T> Extension<T> anonymous() { return new AnonymousExtension<>(); }

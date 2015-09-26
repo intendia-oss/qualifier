@@ -1,4 +1,4 @@
-package com.intendia.qualifier.processor;
+package com.intendia.qualifier.example;
 
 import com.google.common.base.Predicate;
 import com.intendia.qualifier.annotation.Qualify;
@@ -12,20 +12,21 @@ import java.util.concurrent.TimeUnit;
         @QualifyExtension(key = "extension.boolean", type = Boolean.class, value = "true"),
         @QualifyExtension(key = "extension.int", type = Integer.class, value = "1"),
         @QualifyExtension(key = "extension.enum", type = TimeUnit.class, value = "SECONDS"),
-        @QualifyExtension(key = "extension.valueOf", type = SimpleModel.Color.class, value = "red"),
+        @QualifyExtension(key = "extension.valueOf", type = ExampleModel.Color.class, value = "red"),
         @QualifyExtension(key = "extension.class", type = Class.class, value = "java.lang.String"),
 })
-public interface SimpleModel {
-    @Simple(getString = "s", getType = SimpleInnerInterface.class, getInteger = 1) String getSimpleValue();
+public interface ExampleModel {
+    @ExampleManual(getString = "s", getType = ExampleInnerInterface.class, getInteger = 1) //
+    String getStringValue();
 
     List<String> getStringListValue();
 
-    @Qualify class SimpleInner {}
+    @Qualify class ExampleInner {}
 
-    @Qualify @Simple(getString = "s", getType = SimpleInnerInterface.class, getInteger = 1) interface SimpleDependant
-            extends Predicate<SimpleInnerInterface> {}
+    @ExampleManual(getString = "s", getType = ExampleInnerInterface.class, getInteger = 1)
+    @Qualify interface ExampleDependant extends Predicate<ExampleInnerInterface> {}
 
-    @Qualify interface SimpleInnerInterface {
+    @Qualify interface ExampleInnerInterface {
         List<String> getVehicleParam();
 
         void setVehicleParam(List<String> vehicleParam);

@@ -1,6 +1,5 @@
 package com.intendia.qualifier;
 
-import com.google.common.collect.ForwardingObject;
 import java.util.Comparator;
 import javax.annotation.Nullable;
 
@@ -9,10 +8,10 @@ import javax.annotation.Nullable;
  * to modify the behavior of the backing qualifier as desired per the <a href="http://en.wikipedia.org/wiki/Decorator_pattern">decorator
  * pattern</a>.
  */
-public abstract class ForwardingQualifier<T, V> extends ForwardingObject implements PropertyQualifier<T, V> {
+public abstract class ForwardingQualifier<T, V> implements PropertyQualifier<T, V> {
     protected ForwardingQualifier() {}
 
-    @Override protected abstract PropertyQualifier<T, V> delegate();
+    protected abstract PropertyQualifier<T, V> delegate();
 
     @Override public Class<?>[] getGenerics() { return delegate().getGenerics(); }
 
@@ -31,4 +30,8 @@ public abstract class ForwardingQualifier<T, V> extends ForwardingObject impleme
     @Override public String getName() { return delegate().getName(); }
 
     @Override public Class<V> getType() { return delegate().getType(); }
+
+    @Override public String toString() {
+        return delegate().toString();
+    }
 }

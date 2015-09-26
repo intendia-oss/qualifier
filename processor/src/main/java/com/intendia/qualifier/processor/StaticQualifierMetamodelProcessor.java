@@ -5,7 +5,7 @@ import static com.google.common.base.MoreObjects.toStringHelper;
 import static com.google.common.base.Throwables.getCausalChain;
 import static com.google.common.base.Throwables.getStackTraceAsString;
 import static com.google.common.collect.FluentIterable.from;
-import static com.intendia.qualifier.processor.PropertyDescriptor.SELF;
+import static com.intendia.qualifier.processor.Metamodel.SELF;
 import static java.lang.String.format;
 import static java.util.Collections.unmodifiableCollection;
 import static java.util.Objects.requireNonNull;
@@ -25,7 +25,6 @@ import com.google.common.base.CaseFormat;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
@@ -45,10 +44,10 @@ import com.squareup.javapoet.ParameterizedTypeName;
 import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeSpec;
 import com.squareup.javapoet.WildcardTypeName;
-import java.lang.annotation.Annotation;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.time.Instant;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.EnumSet;
 import java.util.HashSet;
@@ -67,7 +66,6 @@ import javax.annotation.processing.AbstractProcessor;
 import javax.annotation.processing.Processor;
 import javax.annotation.processing.RoundEnvironment;
 import javax.lang.model.SourceVersion;
-import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
@@ -84,12 +82,13 @@ import javax.tools.Diagnostic.Kind;
  * Static Qualifier Metamodel Processor.
  * <pre>
  *     model: the actual Pojo model, eg. Person
- *     qualify: the annotations over the model
- *     qualify extension: dynamic qualify annotations
- *     qualifier: the classes to access qualify
- *     metamodel: the qualifier is the metamodel of the model
- *     metadata: the qualifier contains metadatas, metadatas are the runtime representation of the quialify models
+ *     qualify: the annotations over the model, eg. @Unit("years") int getAge()
+ *     extension: dynamic @Extension, constant Extension or untyped String, eg. Extension.key("unit")
+ *     metadata: collection of extensions, eg. personMetadata.data(UNIT_EXTENSION) == "years"
+ *     qualifier: metadata over a type, eg. personMetadata.getType() == Person.class
+ *     metamodel: compile time data (model, qualify, extension...)
  * </pre>
+ * <b>Qualify</b> is the source of an <b>extension</b> and <b>Qualifier</b> the destination.
  */
 public class StaticQualifierMetamodelProcessor extends AbstractProcessor implements Processor {
 
@@ -104,7 +103,7 @@ public class StaticQualifierMetamodelProcessor extends AbstractProcessor impleme
     public static final ClassName LANG_STRING = ClassName.get(String.class);
     private static Set<Element> processed = new HashSet<>();
 
-    private @Nullable List<QualifierProcessorExtension> processorExtensions;
+    private @Nullable List<QualifierProcessorServiceProvider> providers;
     private @Nullable TypeElement beanElement;
 
     @Override public SourceVersion getSupportedSourceVersion() { return SourceVersion.latestSupported(); }
@@ -159,7 +158,7 @@ public class StaticQualifierMetamodelProcessor extends AbstractProcessor impleme
         final ClassName metamodelName = ClassName.bestGuess(beanHelper.getFlatName() + "__");
 
         // final JavaWriter writer = new JavaWriter(sourceWriter);
-        final Collection<PropertyDescriptor> qualifiers = getPropertyDescriptors(beanHelper);
+        final Collection<Metamodel> qualifiers = getPropertyDescriptors(beanHelper);
 
         // public abstract class BeanClass extends BaseQualifier<> implements SimpleQualifier<>
         final TypeSpec.Builder container = TypeSpec.classBuilder(metamodelName.simpleName())
@@ -171,8 +170,8 @@ public class StaticQualifierMetamodelProcessor extends AbstractProcessor impleme
                 .addAnnotation(AnnotationSpec.builder(Generated.class)
                         .addMember("value", "$S", ClassName.get(StaticQualifierMetamodelProcessor.class))
                         .addMember("date", "$S", Instant.now())
-                        .addMember("comments", "$S", "Enabled extensions (" + getProcessorExtensions().size() + "):\n"
-                                + getProcessorExtensions().stream()
+                        .addMember("comments", "$S", "Enabled extensions (" + getProviders().size() + "):\n"
+                                + getProviders().stream()
                                 .map(e -> e.getClass().getSimpleName())
                                 .collect(joining("\n")))
                         .build());
@@ -181,40 +180,38 @@ public class StaticQualifierMetamodelProcessor extends AbstractProcessor impleme
         container.addMethod(MethodSpec.constructorBuilder().addModifiers(PRIVATE).build());
 
         // Bean qualifier extensions
-        getProcessorExtensions().stream()
-                .filter(QualifierProcessorExtension::processable)
+        getProviders().stream()
+                .filter(QualifierProcessorServiceProvider::processable)
                 .forEach(extension -> extension.processBean(container, beanName, qualifiers));
 
         // Emit qualifiers for each bean property
-        for (PropertyDescriptor qualifier : qualifiers) {
+        for (Metamodel qualifier : qualifiers) {
             emitQualifier(container, qualifier);
         }
 
         // All qualifiers instance
         {
             final TypeName valueType = qualifierType(beanClassName, WILDCARD);
-            final TypeName keyType = LANG_STRING;
-            final TypeName mapType = ParameterizedTypeName.get(ClassName.get(Map.class), keyType, valueType);
+            final TypeName mapType = ParameterizedTypeName.get(ClassName.get(Collection.class), valueType);
             container.addField(FieldSpec.builder(mapType, "qualifiers", PUBLIC, STATIC, FINAL)
-                    .initializer("$[$T\n.<$T,$T>builder()$L.build()$]", ImmutableMap.class, keyType, valueType,
-                            qualifiers.stream()
-                                    .filter(PropertyDescriptor::isProperty)
-                                    .map(p -> format(".put(%1$s.getName(), %1$s)", toLower(p.getName())))
-                                    .collect(joining("\n", "\n", "\n")).replace("\n\n", ""))
+                    .initializer("$[$T.<$T>asList($L)$]", Arrays.class, valueType, qualifiers.stream()
+                            .filter(Metamodel::isProperty)
+                            .map(p -> format("%1$s", toLower(p.name())))
+                            .collect(joining("\n,", "\n", "")))
                     .build());
         }
 
         JavaFile.builder(beanHelper.getPackageName(), container.build()).build().writeTo(processingEnv.getFiler());
     }
 
-    private void emitQualifier(TypeSpec.Builder writer, PropertyDescriptor descriptor) {
+    private void emitQualifier(TypeSpec.Builder writer, Metamodel descriptor) {
 
         // Bean ex. ref: person, name: self, type: Person
-        ClassName beanType = ClassName.get(descriptor.getBeanElement());
+        ClassName beanType = ClassName.get(descriptor.beanElement());
 
         // Property ex. ref: person.address, name: address, type: Address
-        String propertyName = toLower(descriptor.getName());
-        TypeName propertyType = TypeName.get(descriptor.getPropertyType());
+        String propertyName = toLower(descriptor.name());
+        TypeName propertyType = TypeName.get(descriptor.propertyType());
 
         // the qualifier representing the property, ex. PersonAddress
         ClassName qualifierType = ClassName.get(beanType.packageName(), beanType.simpleName() + toUpper(propertyName));
@@ -228,7 +225,7 @@ public class StaticQualifierMetamodelProcessor extends AbstractProcessor impleme
                 .addModifiers(PUBLIC, STATIC, FINAL)
                 .addSuperinterface(extendsType);
 
-        getProcessorExtensions().stream().filter(QualifierProcessorExtension::processable).forEach(extension -> {
+        getProviders().stream().filter(QualifierProcessorServiceProvider::processable).forEach(extension -> {
             try {
                 extension.processProperty(qualifier, descriptor);
             } catch (Throwable e) {
@@ -242,14 +239,14 @@ public class StaticQualifierMetamodelProcessor extends AbstractProcessor impleme
         });
 
         // Bean properties
-        if (SELF.equals(descriptor.getName())) {
+        if (SELF.equals(descriptor.name())) {
             // public Set<Qualifier<? super QualifiedClass, ?>> getPropertyQualifiers() {
             final ParameterizedTypeName propertiesType = ParameterizedTypeName.get(ClassName.get(Collection.class),
                     qualifierType(propertyType, WILDCARD));
             qualifier.addMethod(MethodSpec.methodBuilder("getProperties")
                     .addModifiers(PUBLIC)
                     .returns(propertiesType)
-                    .addStatement("return qualifiers.values()")
+                    .addStatement("return qualifiers")
                     .build());
             descriptor.metadata().literal(Qualifier.CORE_PROPERTIES, "getProperties()");
         }
@@ -278,10 +275,10 @@ public class StaticQualifierMetamodelProcessor extends AbstractProcessor impleme
 
         // Property context
         CodeBlock.Builder entries = CodeBlock.builder();
-        final ImmutableList<QualifierMetadata.Entry<?>> orderedExtensions = from(descriptor.getExtensions())
+        final ImmutableList<Metaextension<?>> orderedExtensions = from(descriptor.extensions())
                 .filter(p -> !p.extension().isAnonymous() && p.valueBlock().isPresent())
                 .toSortedList((e1, e2) -> e1.extension().getKey().compareTo(e2.extension().getKey()));
-        for (QualifierMetadata.Entry<?> e : orderedExtensions) { // add extensions
+        for (Metaextension<?> e : orderedExtensions) { // add extensions
             entries.add("case $S: return ", e.extension().getKey());
             entries.add(e.valueBlock().get());
             entries.add(";\n");
@@ -301,49 +298,49 @@ public class StaticQualifierMetamodelProcessor extends AbstractProcessor impleme
         writer.addType(qualifier.build());
     }
 
-    private List<QualifierProcessorExtension> getProcessorExtensions() {
-        if (processorExtensions == null) {
-            print(NOTE, "Loading extensions...");
-            final ServiceLoader<QualifierProcessorExtension> loader = ServiceLoader
-                    .load(QualifierProcessorExtension.class, getClass().getClassLoader());
+    private List<QualifierProcessorServiceProvider> getProviders() {
+        if (providers == null) {
+            print(NOTE, "Loading qualifier processor providers...");
+            final ServiceLoader<QualifierProcessorServiceProvider> loader = ServiceLoader
+                    .load(QualifierProcessorServiceProvider.class, getClass().getClassLoader());
             /*
              * This extra-safe loading prevents recursive compilation failures if the processor try to use an not yet
              * compiled extension.
              */
-            final ImmutableList.Builder<QualifierProcessorExtension> builder = new ImmutableList.Builder<>();
+            final ImmutableList.Builder<QualifierProcessorServiceProvider> builder = new ImmutableList.Builder<>();
 
             // Core extensions (must be executed first)
-            builder.add(new QualifyProcessorExtension());
-            builder.add(new PropertyProcessorExtension());
+            builder.add(new QualifyQualifierProcessorProvider());
+            builder.add(new PropertyQualifierProcessorProvider());
 
-            final Iterator<QualifierProcessorExtension> iterator = loader.iterator();
+            final Iterator<QualifierProcessorServiceProvider> iterator = loader.iterator();
             for (; ; ) {
-                QualifierProcessorExtension next = null;
+                QualifierProcessorServiceProvider next = null;
                 try {
                     if (!iterator.hasNext()) break;
                     next = iterator.next();
                     print(NOTE, "Loaded " + next);
                     builder.add(next);
                 } catch (Throwable e) {
-                    print(ERROR, format("Error loading extension %s, cause: %s\n%s", next,
+                    print(ERROR, format("Error loading QPP %s, cause: %s\n%s", next,
                             getCausalChain(e).stream().map(Throwable::getLocalizedMessage)
                                     .collect(joining(", caused by ")),
                             getStackTraceAsString(e)));
                 }
             }
-            final List<QualifierProcessorExtension> extensions = builder.build();
-            for (QualifierProcessorExtension extension : extensions) {
+            final List<QualifierProcessorServiceProvider> extensions = builder.build();
+            for (QualifierProcessorServiceProvider extension : extensions) {
                 extension.init(processingEnv);
             }
-            processorExtensions = extensions;
+            providers = extensions;
         }
-        return this.processorExtensions;
+        return this.providers;
     }
 
-    public Collection<PropertyDescriptor> getPropertyDescriptors(TypeHelper beanHelper) {
-        Map<String, MirroringPropertyDescriptor> ps = Maps.newTreeMap();
-        final Function<String, MirroringPropertyDescriptor> descriptorFactory = name ->
-                new MirroringPropertyDescriptor(beanHelper.getClassRepresenter(), name);
+    public Collection<Metamodel> getPropertyDescriptors(TypeHelper beanHelper) {
+        Map<String, MirroringMetamodel> ps = Maps.newTreeMap();
+        final Function<String, MirroringMetamodel> descriptorFactory = name ->
+                new MirroringMetamodel(beanHelper.getClassRepresenter(), name);
         { // Add self as property
             ps.computeIfAbsent(SELF, descriptorFactory)
                     .processAnnotationUsingProcessorExtensions(beanHelper.getClassRepresenter());
@@ -373,29 +370,29 @@ public class StaticQualifierMetamodelProcessor extends AbstractProcessor impleme
         return unmodifiableCollection(ps.values());
     }
 
-    public class MirroringPropertyDescriptor implements PropertyDescriptor {
+    public class MirroringMetamodel implements Metamodel {
         private final TypeElement beanElement;
         private final DeclaredType beanType;
         private final String name;
-        private final QualifierMetadata qualifierMetadata;
+        private final Metaqualifier metaqualifier;
 
         private ExecutableElement getter;
         private ExecutableElement setter;
 
-        public MirroringPropertyDescriptor(TypeElement beanElement, String name) {
+        public MirroringMetamodel(TypeElement beanElement, String name) {
             this.beanElement = beanElement;
-            this.beanType = MoreTypes.asDeclared(getBeanElement().asType());
+            this.beanType = MoreTypes.asDeclared(beanElement().asType());
             this.name = name;
-            this.qualifierMetadata = new LocalMetadata();
+            this.metaqualifier = new LocalMetadata();
         }
 
-        @Override public DeclaredType getBeanType() { return beanType; }
+        @Override public DeclaredType beanType() { return beanType; }
 
-        @Override public TypeElement getBeanElement() { return beanElement; }
+        @Override public TypeElement beanElement() { return beanElement; }
 
         /** The property type. Primitive types are returned as boxed. */
-        @Override public DeclaredType getPropertyType() {
-            if (name.equals(SELF)) return (DeclaredType) getBeanElement().asType();
+        @Override public DeclaredType propertyType() {
+            if (name.equals(SELF)) return (DeclaredType) beanElement().asType();
             // Non SELF properties must have getter or setter, and if both exist the type must match
             assert getter != null || setter != null;
             // TODO next assert fails on static (category) setters
@@ -408,7 +405,7 @@ public class StaticQualifierMetamodelProcessor extends AbstractProcessor impleme
             return (DeclaredType) typeMirror;
         }
 
-        @Override public @Nullable ExecutableElement getGetterElement() { return getter; }
+        @Override public @Nullable ExecutableElement getterElement() { return getter; }
 
         public void setGetter(ExecutableElement getter) {
             if (this.getter != null) {
@@ -418,7 +415,7 @@ public class StaticQualifierMetamodelProcessor extends AbstractProcessor impleme
             processAnnotationUsingProcessorExtensions(getter);
         }
 
-        @Override public @Nullable ExecutableElement getSetterElement() { return setter; }
+        @Override public @Nullable ExecutableElement setterElement() { return setter; }
 
         public void setSetter(ExecutableElement setter) {
             if (this.setter != null) {
@@ -429,27 +426,12 @@ public class StaticQualifierMetamodelProcessor extends AbstractProcessor impleme
         }
 
         private void processAnnotationUsingProcessorExtensions(Element method) {
-            for (QualifierProcessorExtension extension : getProcessorExtensions()) {
-                for (AnnotationAnalyzerEntry<?> e : extension.getSupportedAnnotations()) {
-                    processAnnotation(method, e);
-                }
-            }
+            getProviders().forEach(extension -> extension.processMethod(method, metadata()));
         }
 
-        private <A extends Annotation> void processAnnotation(Element annotatedElement, AnnotationAnalyzerEntry<A> e) {
-            final Class<A> annotationType = e.annotationType();
-            A aClass = annotatedElement.getAnnotation(annotationType);
-            AnnotationMirror aMirror = MoreElements.getAnnotationMirror(annotatedElement, e.annotationType()).orNull();
-            if (aClass != null && aMirror != null) {
-                e.process(qualifierMetadata, annotatedElement, aMirror, aClass);
-            }
-        }
+        @Override public String name() { return name; }
 
-        @Override public String getName() { return name; }
-
-        @Override public QualifierMetadata metadata() { return qualifierMetadata; }
-
-        @Override public Iterable<QualifierMetadata.Entry<?>> getExtensions() { return metadata().getExtensions(); }
+        @Override public Metaqualifier metadata() { return metaqualifier; }
 
         @Override public String toString() {
             return toStringHelper(this).add("name", name).add("getter", getter).add("setter", setter).toString();
@@ -482,32 +464,24 @@ public class StaticQualifierMetamodelProcessor extends AbstractProcessor impleme
         return word;
     }
 
-    class LocalMetadata implements QualifierMetadata {
-        private final Map<Extension<?>, Entry<?>> data = new IdentityHashMap<>();
+    class LocalMetadata implements Metaqualifier {
+        private final Map<Extension<?>, Metaextension<?>> data = new IdentityHashMap<>();
 
-        @SuppressWarnings("unchecked") public <T> Optional<Entry<T>> entry(Extension<T> key) {
-            final Optional<Entry<T>> e = Optional.ofNullable((Entry<T>) data.get(key));
-            return e.isPresent() || key.isAnonymous() ? e : entry(key.getKey());
+        @SuppressWarnings("unchecked") public <T> Optional<Metaextension<T>> get(Extension<T> key) {
+            return Optional.ofNullable((Metaextension<T>) data.get(key));
         }
 
-        @SuppressWarnings("unchecked") public <T> Optional<Entry<T>> entry(String key) {
-            return data.values().stream()
-                    .filter(e -> !e.extension().isAnonymous() && e.extension().getKey().equals(key))
-                    .map(e -> (Entry<T>) e)
-                    .findFirst();
-        }
-
-        public <T> Entry<T> put(Extension<T> key) {
-            return entry(key).orElseGet(() -> {
-                LocalEntry<T> e;
-                data.put(key, e = new LocalEntry<>(key));
+        public <T> Metaextension<T> put(Extension<T> key) {
+            return get(key).orElseGet(() -> {
+                LocalMetaextension<T> e;
+                data.put(key, e = new LocalMetaextension<>(key));
                 return e;
             });
         }
 
-        public Entry<?> use(QualifyExtension annotation) { return extension(annotation); }
+        public Metaextension<?> use(QualifyExtension annotation) { return extension(annotation); }
 
-        private <T> Entry<T> extension(QualifyExtension annotation) {
+        private <T> Metaextension<T> extension(QualifyExtension annotation) {
             final String key = annotation.key();
             final String str = annotation.value();
 
@@ -530,15 +504,15 @@ public class StaticQualifierMetamodelProcessor extends AbstractProcessor impleme
                 }
             }
 
-            Entry<T> entry = put(Extension.key(key), typeMirror);
-            if (value != null) entry.value(value);
-            else if (Class.class.equals(type)) entry.valueBlock("$T.class", ClassName.bestGuess(str));
-            else entry.valueBlock("$T.valueOf($S)", typeMirror, str);
-            return entry;
+            Metaextension<T> metaextension = put(Extension.key(key), typeMirror);
+            if (value != null) metaextension.value(value);
+            else if (Class.class.equals(type)) metaextension.valueBlock("$T.class", ClassName.bestGuess(str));
+            else metaextension.valueBlock("$T.valueOf($S)", typeMirror, str);
+            return metaextension;
         }
 
         private @Nullable <T> Class<T> extensionClass(TypeMirror typeMirror) {
-            Class<T> type;
+            @Nullable Class<T> type;
             try {
                 //noinspection unchecked
                 type = (Class<T>) Thread.currentThread().getContextClassLoader().loadClass(typeMirror.toString());
@@ -550,37 +524,37 @@ public class StaticQualifierMetamodelProcessor extends AbstractProcessor impleme
         private TypeMirror extensionType(QualifyExtension annotation) {
             TypeMirror typeMirror;
             try {
-                annotation.type(); throw new RuntimeException("unreacheable");
+                annotation.type(); throw new RuntimeException("unreachable");
             } catch (MirroredTypeException exception) {
                 typeMirror = exception.getTypeMirror();
             }
             return typeMirror;
         }
 
-        @Override public Collection<Entry<?>> getExtensions() { return unmodifiableCollection(data.values()); }
+        @Override public Collection<Metaextension<?>> values() { return unmodifiableCollection(data.values()); }
 
-        class LocalEntry<T> implements QualifierMetadata.Entry<T> {
+        class LocalMetaextension<T> implements Metaextension<T> {
             private final Extension<T> key;
             private @Nullable TypeMirror type;
             private @Nullable T value;
             private @Nullable CodeBlock block;
 
-            private LocalEntry(Extension<T> key) { this.key = key; }
+            private LocalMetaextension(Extension<T> key) { this.key = key; }
 
             public Extension<T> extension() { return key; }
 
             public Optional<TypeMirror> type() { return Optional.ofNullable(type); }
 
-            public LocalEntry<T> type(TypeMirror type) {
+            public LocalMetaextension<T> type(TypeMirror type) {
                 Preconditions.checkState(this.type == null, "type already set");
                 this.type = type; return this;
             }
 
-            public LocalEntry<T> type(Class<T> type) { return type(typeElementFor(type).asType()); }
+            public LocalMetaextension<T> type(Class<T> type) { return type(typeElementFor(type).asType()); }
 
             public Optional<T> value() { return Optional.ofNullable(value); }
 
-            public LocalEntry<T> value(T value) {
+            public LocalMetaextension<T> value(T value) {
                 this.value = Preconditions.checkNotNull(value, "value required (extension: %s)", key);
                 Class<?> valueClass = value.getClass();
                 if (valueClass.getEnclosingClass() != null && valueClass.getEnclosingClass().isEnum()) {
@@ -593,8 +567,8 @@ public class StaticQualifierMetamodelProcessor extends AbstractProcessor impleme
                 return this;
             }
 
-            @Override public Entry<T> value(T value, T defaultValue) {
-                if (Objects.equals(value, defaultValue)) return this; return value(value);
+            @Override public Metaextension<T> value(T value, T ignoreIfEqual) {
+                if (Objects.equals(value, ignoreIfEqual)) return this; return value(value);
             }
 
             public Optional<CodeBlock> valueBlock() {
@@ -644,12 +618,12 @@ public class StaticQualifierMetamodelProcessor extends AbstractProcessor impleme
             }
 
             /** Nullify to not include in static metadata. */
-            public LocalEntry<T> valueBlock(@Nullable CodeBlock block) {
+            public LocalMetaextension<T> valueBlock(@Nullable CodeBlock block) {
                 this.block = block;
                 return this;
             }
 
-            public QualifierMetadata done() { return LocalMetadata.this; }
+            public Metaqualifier done() { return LocalMetadata.this; }
         }
     }
 }

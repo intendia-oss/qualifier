@@ -1,4 +1,3 @@
 <module>
-	<inherits name="com.google.common.collect.Collect"/>
-	<source path="" excludes="processor/**"/>
+    <source path="" excludes="processor/**"/>
 </module>

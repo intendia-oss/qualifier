@@ -1,19 +1,22 @@
 package com.intendia.qualifier.annotation;
 
-import java.lang.annotation.ElementType;
+import static java.lang.annotation.ElementType.ANNOTATION_TYPE;
+import static java.lang.annotation.ElementType.METHOD;
+import static java.lang.annotation.ElementType.TYPE;
+import static java.lang.annotation.RetentionPolicy.SOURCE;
+
 import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
  * Is used to specify the mapped qualifying for a resource property or field. If no <code>Qualify</code> annotation is
  * specified, the default values apply.
  */
-@Retention(RetentionPolicy.RUNTIME)
-@Target({ ElementType.TYPE, ElementType.METHOD, ElementType.FIELD })
+@Retention(SOURCE) @Target({ TYPE, METHOD })
 public @interface Qualify {
 
     /** (Optional) An array of <code>QualifyExtension</code> annotations. */
     QualifyExtension[] extend() default {};
 
+    @Retention(SOURCE) @Target(ANNOTATION_TYPE) @interface Auto {}
 }

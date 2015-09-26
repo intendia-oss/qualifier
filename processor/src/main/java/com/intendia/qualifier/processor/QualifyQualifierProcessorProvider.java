@@ -31,23 +31,23 @@ import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.ElementFilter;
 import javax.tools.Diagnostic;
 
-public class QualifyProcessorExtension extends AbstractQualifierProcessorExtension {
+public class QualifyQualifierProcessorProvider extends QualifierProcessorServiceProvider {
     public static final WildcardTypeName WILDCARD = WildcardTypeName.subtypeOf(TypeName.OBJECT);
     public static final ClassName LANG_CLASS = ClassName.get(Class.class);
 
-    public QualifyProcessorExtension() { registerAnnotation(Qualify.class, this::processQualify); }
+    public QualifyQualifierProcessorProvider() { registerAnnotation(Qualify.class, this::processQualify); }
 
-    private void processQualify(AnnotationContext<Qualify> ctx) {
+    private void processQualify(QualifierAnnotationAnalyzer.AnnotationContext<Qualify> ctx) {
         for (QualifyExtension qualifyExtension : ctx.annotation().extend()) {
             addQualifyExtension(ctx.metadata(), ctx.annotatedElement(), ctx.annotationMirror(), qualifyExtension);
         }
     }
 
-    public void addQualifyExtension(QualifierMetadata context, Element annotatedElement,
+    public void addQualifyExtension(Metaqualifier context, Element annotatedElement,
             AnnotationMirror annotationMirror, QualifyExtension qualifyExtension) {
-        final QualifierMetadata.Entry<?> entry = context.use(qualifyExtension);
+        final Metaextension<?> metaextension = context.use(qualifyExtension);
 
-        final TypeMirror type = entry.type().get();
+        final TypeMirror type = metaextension.type().get();
         final TypeElement element = MoreElements.asType(types().asElement(type));
 
         // Do not requires validation
@@ -63,7 +63,7 @@ public class QualifyProcessorExtension extends AbstractQualifierProcessorExtensi
         if (!valid) {
             getProcessingEnv().getMessager().printMessage(Diagnostic.Kind.ERROR, String.format(
                             "Qualifier extension type '%s' with key '%s' must have a 'valueOf(String)' static " +
-                                    "method", entry.type(), entry.extension()),
+                                    "method", metaextension.type(), metaextension.extension()),
                     annotatedElement, annotationMirror);
         }
 
@@ -77,27 +77,27 @@ public class QualifyProcessorExtension extends AbstractQualifierProcessorExtensi
         return ElementFilter.methodsIn(getProcessingEnv().getElementUtils().getAllMembers(classRepresenter));
     }
 
-    @Override public void processProperty(TypeSpec.Builder writer, PropertyDescriptor descriptor) {
+    @Override public void processProperty(TypeSpec.Builder writer, Metamodel descriptor) {
         // Property name
         writer.addMethod(methodBuilder("getName")
                 .addModifiers(PUBLIC)
                 .returns(String.class)
-                .addStatement("return $S", descriptor.getName())
+                .addStatement("return $S", descriptor.name())
                 .build());
         descriptor.metadata().put(CORE_NAME).valueBlock("getName()");
 
         // Property type
         writer.addMethod(MethodSpec.methodBuilder("getType")
                 .addModifiers(PUBLIC)
-                .returns(ParameterizedTypeName.get(LANG_CLASS, TypeName.get(descriptor.getPropertyType())))
+                .returns(ParameterizedTypeName.get(LANG_CLASS, TypeName.get(descriptor.propertyType())))
                 .addStatement("return $L$T.class",
-                        descriptor.getPropertyType().getTypeArguments().isEmpty() ? "" : "(Class) ",
-                        TypeName.get(types().erasure(descriptor.getPropertyType())))
+                        descriptor.propertyType().getTypeArguments().isEmpty() ? "" : "(Class) ",
+                        TypeName.get(types().erasure(descriptor.propertyType())))
                 .build());
         descriptor.metadata().put(CORE_TYPE).valueBlock("getType()");
 
         // Property generics
-        final List<? extends TypeMirror> typeArguments = descriptor.getPropertyType().getTypeArguments();
+        final List<? extends TypeMirror> typeArguments = descriptor.propertyType().getTypeArguments();
         if (!typeArguments.isEmpty()) {
             writer.addMethod(MethodSpec.methodBuilder("getGenerics")
                     .addModifiers(PUBLIC)
