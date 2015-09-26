@@ -18,6 +18,7 @@ import static javax.lang.model.element.Modifier.PUBLIC;
 import static javax.lang.model.element.Modifier.STATIC;
 import static javax.tools.Diagnostic.Kind.ERROR;
 import static javax.tools.Diagnostic.Kind.NOTE;
+import static javax.tools.Diagnostic.Kind.WARNING;
 
 import com.google.auto.common.MoreElements;
 import com.google.auto.common.MoreTypes;
@@ -44,6 +45,8 @@ import com.squareup.javapoet.ParameterizedTypeName;
 import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeSpec;
 import com.squareup.javapoet.WildcardTypeName;
+import com.sun.tools.javac.processing.JavacProcessingEnvironment;
+import groovy.lang.GroovyClassLoader;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.time.Instant;
@@ -77,6 +80,10 @@ import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.Elements;
 import javax.lang.model.util.Types;
 import javax.tools.Diagnostic.Kind;
+import javax.tools.FileObject;
+import javax.tools.JavaCompiler;
+import javax.tools.StandardLocation;
+import javax.tools.ToolProvider;
 
 /**
  * Static Qualifier Metamodel Processor.
@@ -322,10 +329,21 @@ public class StaticQualifierMetamodelProcessor extends AbstractProcessor impleme
                     print(NOTE, "Loaded " + next);
                     builder.add(next);
                 } catch (Throwable e) {
-                    print(ERROR, format("Error loading QPP %s, cause: %s\n%s", next,
-                            getCausalChain(e).stream().map(Throwable::getLocalizedMessage)
-                                    .collect(joining(", caused by ")),
+                    print(WARNING, format("Error loading qualifier processor service provider %s, cause: %s\n%s", next,
+                            getCausalChain(e).stream().map(Throwable::getMessage).collect(joining(", caused by ")),
                             getStackTraceAsString(e)));
+                    try {
+                        ClassLoader cl = ((JavacProcessingEnvironment) processingEnv).getProcessorClassLoader();
+                        GroovyClassLoader groovy = new GroovyClassLoader(cl);
+                        String serviceName = e.getMessage().replaceAll("(.*Provider )(.*?)( not found)", "$2");
+                        ClassName className = ClassName.bestGuess(serviceName);
+                        FileObject resource = processingEnv.getFiler().getResource(StandardLocation.SOURCE_PATH,
+                                className.packageName(), className.simpleName().concat(".java"));
+                        JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
+                        // TODO not sure how to configure groovy to use the full class path
+                    } catch (Throwable e1) {
+                        throw new RuntimeException(e1);
+                    }
                 }
             }
             final List<QualifierProcessorServiceProvider> extensions = builder.build();

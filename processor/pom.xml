@@ -13,6 +13,7 @@
         <dependency><groupId>com.google.guava</groupId><artifactId>guava</artifactId></dependency>
         <dependency><groupId>com.intendia.qualifier</groupId><artifactId>qualifier</artifactId></dependency>
         <dependency><groupId>com.squareup</groupId><artifactId>javapoet</artifactId></dependency>
+        <dependency><groupId>org.codehaus.groovy</groupId><artifactId>groovy</artifactId><version>2.4.5</version></dependency>
         <!-- Optional -->
         <dependency><groupId>com.google.code.findbugs</groupId><artifactId>jsr305</artifactId><optional>true</optional></dependency>
         <!-- Test -->
