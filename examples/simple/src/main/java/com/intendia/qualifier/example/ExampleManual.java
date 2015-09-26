@@ -3,12 +3,15 @@ package com.intendia.qualifier.example;
 import static java.lang.annotation.RetentionPolicy.SOURCE;
 
 import java.lang.annotation.Retention;
+import java.util.concurrent.TimeUnit;
 
 @Retention(SOURCE)
 public @interface ExampleManual {
-    String getString();
+    String string();
 
-    int getInteger();
+    int integer();
 
-    Class<?> getType();
+    Class<?> type();
+
+    TimeUnit enumeration();
 }

@@ -41,8 +41,8 @@ public abstract class QualifierProcessorServiceProvider {
 
     public boolean processable() { return true; }
 
-    public void processMethod(Element method, Metaqualifier metaqualifier) {
-        annotationAnalyzers.forEach(p -> p.process(method, metaqualifier));
+    public void processAnnotated(Element element, Metaqualifier metaqualifier) {
+        annotationAnalyzers.forEach(p -> p.process(element, metaqualifier));
     }
 
     /**

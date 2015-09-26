@@ -18,8 +18,8 @@ public class ExampleQualifierProcessorProvider extends QualifierProcessorService
         final ExampleManual value = simple.annotation();
         final TypeMirror classType = typeElementFor(Class.class).asType();
         simple.metadata()
-                .use(ExampleManualExtension.STRING, value.getString()).done()
-                .use(ExampleManualExtension.INTEGER, value.getInteger()).done()
+                .use(ExampleManualExtension.STRING, value.string()).done()
+                .use(ExampleManualExtension.INTEGER, value.integer()).done()
                 .literal(ExampleManualExtension.TYPE, "$T.class", parametersType(value)).type(classType).done()
                 .use(LOADED, Instant.now().toString()).done()
                 .literal(LITERAL, "$S", "literal").done()
@@ -29,7 +29,7 @@ public class ExampleQualifierProcessorProvider extends QualifierProcessorService
     private static TypeMirror parametersType(ExampleManual annotation) {
         // http://blog.retep.org/2009/02/13/getting-class-values-from-annotations-in-an-annotationprocessor/
         try {
-            annotation.getType();
+            annotation.type();
             return null; // this must not happens
         } catch (MirroredTypeException exception) {
             return exception.getTypeMirror();

@@ -1,4 +1,7 @@
+// Copyright 2015 Intendia, SL.
 package com.intendia.qualifier.example;
+
+import static java.util.concurrent.TimeUnit.SECONDS;
 
 import com.google.common.base.Predicate;
 import com.intendia.qualifier.annotation.Qualify;
@@ -16,14 +19,16 @@ import java.util.concurrent.TimeUnit;
         @QualifyExtension(key = "extension.class", type = Class.class, value = "java.lang.String"),
 })
 public interface ExampleModel {
-    @ExampleManual(getString = "s", getType = ExampleInnerInterface.class, getInteger = 1) //
+    @ExampleAuto(string = "s", type = ExampleInnerInterface.class, integer = 1, enumeration = SECONDS)
+    @ExampleManual(string = "s", type = ExampleInnerInterface.class, integer = 1, enumeration = SECONDS) //
     String getStringValue();
 
     List<String> getStringListValue();
 
     @Qualify class ExampleInner {}
 
-    @ExampleManual(getString = "s", getType = ExampleInnerInterface.class, getInteger = 1)
+    @ExampleAuto(string = "s", type = ExampleInnerInterface.class, integer = 1, enumeration = SECONDS)
+    @ExampleManual(string = "s", type = ExampleInnerInterface.class, integer = 1, enumeration = SECONDS)
     @Qualify interface ExampleDependant extends Predicate<ExampleInnerInterface> {}
 
     @Qualify interface ExampleInnerInterface {

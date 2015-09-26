@@ -5,12 +5,15 @@ import static java.lang.annotation.RetentionPolicy.SOURCE;
 
 import com.intendia.qualifier.annotation.Qualify;
 import java.lang.annotation.Retention;
+import java.util.concurrent.TimeUnit;
 
 @Qualify.Auto @Retention(SOURCE)
 public @interface ExampleAuto {
-    String getString();
+    String string();
 
-    int getInteger();
+    int integer();
 
-    Class<?> getType();
+    Class<?> type();
+
+    TimeUnit enumeration();
 }

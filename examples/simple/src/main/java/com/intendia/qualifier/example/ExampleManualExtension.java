@@ -4,6 +4,7 @@ package com.intendia.qualifier.example;
 import com.intendia.qualifier.Extension;
 import com.intendia.qualifier.Qualifier;
 
+@FunctionalInterface
 public interface ExampleManualExtension<V> extends Qualifier<V> {
     Extension<String> STRING = Extension.key("simple.string");
     Extension<Integer> INTEGER = Extension.key("simple.integer");

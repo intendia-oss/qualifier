@@ -3,6 +3,7 @@ package com.intendia.qualifier.annotation;
 import static java.lang.annotation.ElementType.ANNOTATION_TYPE;
 import static java.lang.annotation.ElementType.METHOD;
 import static java.lang.annotation.ElementType.TYPE;
+import static java.lang.annotation.RetentionPolicy.RUNTIME;
 import static java.lang.annotation.RetentionPolicy.SOURCE;
 
 import java.lang.annotation.Retention;
@@ -18,5 +19,5 @@ public @interface Qualify {
     /** (Optional) An array of <code>QualifyExtension</code> annotations. */
     QualifyExtension[] extend() default {};
 
-    @Retention(SOURCE) @Target(ANNOTATION_TYPE) @interface Auto {}
+    @Retention(RUNTIME) @Target(ANNOTATION_TYPE) @interface Auto {}
 }
