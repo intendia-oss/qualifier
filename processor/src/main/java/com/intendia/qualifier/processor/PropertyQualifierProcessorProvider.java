@@ -1,7 +1,11 @@
 // Copyright 2015 Intendia, SL.
 package com.intendia.qualifier.processor;
 
+import static com.intendia.qualifier.PropertyQualifier.PROPERTY_GETTER;
 import static com.intendia.qualifier.PropertyQualifier.PROPERTY_PATH;
+import static com.intendia.qualifier.PropertyQualifier.PROPERTY_READABLE;
+import static com.intendia.qualifier.PropertyQualifier.PROPERTY_SETTER;
+import static com.intendia.qualifier.PropertyQualifier.PROPERTY_WRITABLE;
 import static javax.lang.model.element.Modifier.PUBLIC;
 
 import com.intendia.qualifier.PropertyQualifier;
@@ -10,6 +14,8 @@ import com.squareup.javapoet.MethodSpec;
 import com.squareup.javapoet.ParameterizedTypeName;
 import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeSpec;
+import java.util.function.BiConsumer;
+import java.util.function.Function;
 import javax.lang.model.element.ExecutableElement;
 
 public class PropertyQualifierProcessorProvider extends QualifierProcessorServiceProvider {
@@ -51,6 +57,8 @@ public class PropertyQualifierProcessorProvider extends QualifierProcessorServic
 
             }
             writer.addMethod(getMethod.build());
+            descriptor.metadata().literal(PROPERTY_GETTER, "($T<$T,$T>) this::get",
+                    Function.class, beanType, propertyType);
 
             // isReadable()
             writer.addMethod(MethodSpec.methodBuilder("isReadable")
@@ -58,6 +66,7 @@ public class PropertyQualifierProcessorProvider extends QualifierProcessorServic
                     .returns(TypeName.BOOLEAN.box())
                     .addStatement("return true")
                     .build());
+            descriptor.metadata().literal(PROPERTY_READABLE, "isReadable()");
         }
 
         // Property setter
@@ -76,6 +85,8 @@ public class PropertyQualifierProcessorProvider extends QualifierProcessorServic
 
             }
             writer.addMethod(getMethod.build());
+            descriptor.metadata().literal(PROPERTY_SETTER, "($T<$T,$T>) this::set",
+                    BiConsumer.class, beanType, propertyType);
 
             // isWritable()
             writer.addMethod(MethodSpec.methodBuilder("isWritable")
@@ -83,6 +94,7 @@ public class PropertyQualifierProcessorProvider extends QualifierProcessorServic
                     .returns(TypeName.BOOLEAN.box())
                     .addStatement("return true")
                     .build());
+            descriptor.metadata().literal(PROPERTY_WRITABLE, "isWritable()");
         }
     }
 }

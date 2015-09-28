@@ -240,7 +240,7 @@ public class StaticQualifierMetamodelProcessor extends AbstractProcessor impleme
                 .addAnnotation(AnnotationSpec.builder(Generated.class)
                         .addMember("value", "$S", ClassName.get(StaticQualifierMetamodelProcessor.class))
                         .addMember("date", "$S", Instant.now())
-                        .addMember("comments", "$S", "Enabled extensions (" + getProviders().size() + "):\n"
+                        .addMember("comments", "$S", "Enabled processor providers (" + getProviders().size() + "):\n"
                                 + getProviders().stream()
                                 .map(e -> e.getClass().getSimpleName())
                                 .collect(joining("\n")))
@@ -267,7 +267,7 @@ public class StaticQualifierMetamodelProcessor extends AbstractProcessor impleme
                     .initializer("$[$T.<$T>asList($L)$]", Arrays.class, valueType, qualifiers.stream()
                             .filter(Metamodel::isProperty)
                             .map(p -> format("%1$s", toLower(p.name())))
-                            .collect(joining("\n,", "\n", "")))
+                            .collect(joining(",\n", "\n", "")))
                     .build());
         }
 

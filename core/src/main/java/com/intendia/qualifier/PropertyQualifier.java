@@ -2,6 +2,8 @@
 package com.intendia.qualifier;
 
 import java.util.Comparator;
+import java.util.function.BiConsumer;
+import java.util.function.Function;
 import javax.annotation.Nullable;
 
 /**
@@ -10,22 +12,30 @@ import javax.annotation.Nullable;
  */
 @FunctionalInterface
 public interface PropertyQualifier<T, V> extends Qualifier<V> {
-    Extension<String> PROPERTY_PATH = Extension.key("core.path");
+    Extension<String> PROPERTY_PATH = Extension.key("property.path");
+    Extension<Function<?, ?>> PROPERTY_GETTER = Extension.key("property.getter");
+    Extension<Boolean> PROPERTY_READABLE = Extension.key("property.readable");
+    Extension<BiConsumer<?, ?>> PROPERTY_SETTER = Extension.key("property.setter");
+    Extension<Boolean> PROPERTY_WRITABLE = Extension.key("property.writable");
 
     default String getPath() { return data(PROPERTY_PATH); }
 
     // TODO add Nullable/Nonnull annotations using processor extensions
     @SuppressWarnings("NullableProblems") default V get(T object) {
-        throw new UnsupportedOperationException("Property " + getName() + " is not readable");
+        return opt(PROPERTY_GETTER.<Function<T, V>>as())
+                .orElseThrow(() -> new UnsupportedOperationException("Property " + getName() + " is not readable"))
+                .apply(object);
     }
 
-    default Boolean isReadable() { return Boolean.FALSE; }
+    default Boolean isReadable() { return data(PROPERTY_READABLE, Boolean.FALSE); }
 
     @SuppressWarnings("NullableProblems") default void set(T object, V value) {
-        throw new UnsupportedOperationException("Property " + getName() + " is not settable");
+        opt(PROPERTY_SETTER.<BiConsumer<T, V>>as())
+                .orElseThrow(() -> new UnsupportedOperationException("Property " + getName() + " is not writable"))
+                .accept(object, value);
     }
 
-    default Boolean isWritable() { return Boolean.FALSE; }
+    default Boolean isWritable() { return data(PROPERTY_WRITABLE, Boolean.FALSE); }
 
     // TODO rename as getBeanComparator (or similar, something indicating that this applies to parent)
     default Comparator<? super T> getComparator() {
@@ -39,6 +49,9 @@ public interface PropertyQualifier<T, V> extends Qualifier<V> {
 
     static <V> PropertyQualifier<V, V> asProperty(Qualifier<V> q) { return new IdentityPropertyQualifier<>(q); }
 
+    static <V> PropertyQualifier<?, V> of(Qualifier<V> q) {
+        return q instanceof PropertyQualifier ? (PropertyQualifier<?, V>) q : q::data;
+    }
 }
 
 class IdentityPropertyQualifier<X> implements PropertyQualifier<X, X> {
