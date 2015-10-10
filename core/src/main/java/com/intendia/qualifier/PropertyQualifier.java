@@ -18,7 +18,7 @@ public interface PropertyQualifier<T, V> extends Qualifier<V> {
     Extension<BiConsumer<?, ?>> PROPERTY_SETTER = Extension.key("property.setter");
     Extension<Boolean> PROPERTY_WRITABLE = Extension.key("property.writable");
 
-    default String getPath() { return data(PROPERTY_PATH); }
+    default String getPath() { return data(PROPERTY_PATH, ""); }
 
     // TODO add Nullable/Nonnull annotations using processor extensions
     @SuppressWarnings("NullableProblems") default V get(T object) {
