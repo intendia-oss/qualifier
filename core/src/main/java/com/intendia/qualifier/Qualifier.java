@@ -4,8 +4,10 @@ package com.intendia.qualifier;
 import static java.util.Collections.emptySet;
 
 import java.util.Collection;
+import javax.annotation.Nullable;
 
 @FunctionalInterface
+@SuppressWarnings("ClassReferencesSubclass")
 public interface Qualifier<V> extends Metadata {
     Extension<String> CORE_NAME = Extension.key("core.name");
     Extension<Class<?>> CORE_TYPE = Extension.key("core.type");
@@ -21,4 +23,11 @@ public interface Qualifier<V> extends Metadata {
 
     /** Return the property qualifiers of the bean qualifier. */
     default Collection<PropertyQualifier<V, ?>> getProperties() { return data(CORE_PROPERTIES.as(), emptySet()); }
+
+    default @Nullable PropertyQualifier<V, ?> getProperty(String name) {
+        for (PropertyQualifier<V, ?> property : getProperties()) {
+            if (name.equals(property.getName())) return property;
+        }
+        return null;
+    }
 }
