@@ -1,14 +1,17 @@
 package com.intendia.qualifier.example;
 
+import static com.intendia.qualifier.ComparableQualifier.COMPARABLE_COMPARATOR;
 import static com.intendia.qualifier.example.ExampleModelExampleInner__.ExampleInnerMetadata;
 import static com.intendia.qualifier.example.ExampleModel__.ExampleModelMetadata;
 import static com.intendia.qualifier.example.ExampleModel__.stringListValue;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 
+import com.intendia.qualifier.ComparableQualifier;
 import com.intendia.qualifier.Extension;
+import com.intendia.qualifier.PropertyQualifier;
 import com.intendia.qualifier.Qualifier;
-import com.intendia.qualifier.example.ExampleModel.Color;
+import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import org.junit.Assert;
@@ -47,5 +50,33 @@ public class ExampleProcessorExtensionTest {
         assertNotNull(ExampleModelMetadata);
         assertNotNull(ExampleInnerMetadata);
         assertEquals(List.class, stringListValue.getType());
+    }
+
+    @Test public void assert_comparator_can_be_override() {
+        Comparator<ExampleModel> stringComparator = ExampleModel__.stringValue.getPropertyComparator();
+        Qualifier<ExampleModel> override = ExampleModelMetadata.override(COMPARABLE_COMPARATOR, stringComparator);
+        // this is easy, just confirm comparable returns the override qualifier
+        assertEquals(stringComparator, ComparableQualifier.of(override).getTypeComparator());
+        // this is the important, confirm that identity decorator maintains the override comparator
+        assertEquals(stringComparator, PropertyQualifier.asProperty(override).getPropertyComparator());
+    }
+
+    @Test public void assert_paths() {
+        Qualifier<ExampleModel> q = ExampleModelMetadata;
+
+        PropertyQualifier<ExampleModel, ExampleModel> qSelf = PropertyQualifier.asProperty(q);
+        assertEquals("", qSelf.getPath());
+        assertEquals("self", qSelf.getName());
+        assertEquals("override", qSelf.getPath("override"));
+
+        PropertyQualifier<ExampleModel, String> qString = ExampleModel__.stringValue;
+        assertEquals("stringValue", qString.getPath());
+        assertEquals("stringValue", qString.getName());
+        assertEquals("override", qString.getPath("override"));
+
+        PropertyQualifier<ExampleModel, String> qColor = ExampleModel__.colorValue.compose(Color__.name);
+        assertEquals("colorValue.name", qColor.getPath());
+        assertEquals("name", qColor.getName());
+        assertEquals("colorValue.override", qColor.getPath("override"));
     }
 }

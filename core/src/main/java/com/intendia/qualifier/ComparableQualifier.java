@@ -9,15 +9,19 @@ import java.util.function.Function;
 import javax.annotation.Nullable;
 
 public interface ComparableQualifier<T> extends Qualifier<T> {
-    // TODO choose comparator in processor, rename as getComparator after renaming Property.getComparator
-    default Comparator<T> getOrdering() { return new NullsFirstComparator<>(comparing(Objects::toString)); }
+    Extension<Comparator<?>> COMPARABLE_COMPARATOR = Extension.key("comparable.comparator");
 
-    static <T> ComparableQualifier<T> of(Qualifier<T> q) {
-        return q instanceof ComparableQualifier ? (ComparableQualifier<T>) q : q::data;
+    // TODO choose comparator in processor
+    default Comparator<T> getTypeComparator() {
+        return data(COMPARABLE_COMPARATOR.as(), new NullsFirstComparator<>(comparing(Objects::toString)));
     }
 
     default <F> Comparator<F> orderingOnResultOf(Function<F, ? extends T> function) {
-        return new ByFunctionComparator<>(function, getOrdering());
+        return new ByFunctionComparator<>(function, getTypeComparator());
+    }
+
+    static <T> ComparableQualifier<T> of(Qualifier<T> q) {
+        return q instanceof ComparableQualifier ? (ComparableQualifier<T>) q : q::data;
     }
 
     static <T, U extends Comparable<? super U>> Comparator<T> comparing(Function<? super T, ? extends U> keyExtractor) {

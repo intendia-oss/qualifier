@@ -20,6 +20,13 @@ public interface PropertyQualifier<T, V> extends Qualifier<V> {
 
     default String getPath() { return data(PROPERTY_PATH, ""); }
 
+    //XXX experimental: utility to extract path without name
+    default String getPath(String concat) {
+        final String path = getPath();
+        if (path.isEmpty()) return concat;
+        else return getPath().substring(0, path.length() - getName().length()) + concat;
+    }
+
     // TODO add Nullable/Nonnull annotations using processor extensions
     @SuppressWarnings("NullableProblems") default V get(T object) {
         return opt(PROPERTY_GETTER.<Function<T, V>>as())
@@ -37,14 +44,17 @@ public interface PropertyQualifier<T, V> extends Qualifier<V> {
 
     default Boolean isWritable() { return data(PROPERTY_WRITABLE, Boolean.FALSE); }
 
-    // TODO rename as getBeanComparator (or similar, something indicating that this applies to parent)
-    default Comparator<? super T> getComparator() {
+    default Comparator<T> getPropertyComparator() {
         return ComparableQualifier.of(this).orderingOnResultOf(this::get);
     }
 
     /** Traverse a qualifier returning a new qualifier which has source type this and value type property. */
-    default <U> PropertyQualifier<T, U> as(PropertyQualifier<? super V, U> property) {
+    default <U> PropertyQualifier<T, U> compose(PropertyQualifier<? super V, U> property) {
         return new CompositionPropertyQualifier<>(this, property);
+    }
+
+    default <E> PropertyQualifier<T, V> override(Extension<E> extension, E value) {
+        return str -> extension.getKey().equals(str) ? value : data(extension);
     }
 
     static <V> PropertyQualifier<V, V> asProperty(Qualifier<V> q) { return new IdentityPropertyQualifier<>(q); }
@@ -65,7 +75,7 @@ class IdentityPropertyQualifier<X> implements PropertyQualifier<X, X> {
 
     @Override public Boolean isReadable() { return true; }
 
-    @Override public Comparator<? super X> getComparator() { return ComparableQualifier.of(f).getOrdering(); }
+    @Override public Comparator<X> getPropertyComparator() { return ComparableQualifier.of(f).getTypeComparator(); }
 }
 
 /**
@@ -101,8 +111,8 @@ class CompositionPropertyQualifier<X, Y, Z> implements PropertyQualifier<X, Y> {
 
     @Override public Boolean isWritable() { return f.isWritable() && g.isWritable(); }
 
-    @Override public Comparator<? super X> getComparator() {
-        return (o1, o2) -> g.getComparator().compare(
+    @Override public Comparator<X> getPropertyComparator() {
+        return (o1, o2) -> g.getPropertyComparator().compare(
                 o1 == null ? null : f.get(o1),
                 o2 == null ? null : f.get(o2));
     }

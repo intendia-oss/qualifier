@@ -30,4 +30,9 @@ public interface Qualifier<V> extends Metadata {
         }
         return null;
     }
+
+    //XXX experimental: utility to override one extension value
+    default <E> Qualifier<V> override(Extension<E> extension, E value){
+        return str -> extension.getKey().equals(str) ? value : data(extension);
+    }
 }
