@@ -85,11 +85,7 @@ public class TypeHelper {
     }
 
     public String getFlatName() {
-        if (classRepresenter.getNestingKind() == NestingKind.MEMBER) {
-            return classRepresenter.getEnclosingElement() + "" + getSimpleClassName();
-        } else {
-            return getClassName();
-        }
+        return getFlatName(classRepresenter);
     }
 
     public TypeElement getClassRepresenter() {
@@ -227,5 +223,17 @@ public class TypeHelper {
                 .filter(m -> m.getSimpleName().contentEquals(name))
                 .findFirst()
                 .orElseThrow(() -> new IllegalArgumentException("method " + name + " not found"));
+    }
+
+    public static String getFlatName(TypeElement classRepresenter) {
+        if (classRepresenter.getNestingKind() == NestingKind.MEMBER) {
+            return classRepresenter.getEnclosingElement() + "" + classRepresenter.getSimpleName().toString();
+        } else {
+            return classRepresenter.getQualifiedName().toString();
+        }
+    }
+
+    public static String getQualifierName(String flatName) {
+        return flatName + "__";
     }
 }

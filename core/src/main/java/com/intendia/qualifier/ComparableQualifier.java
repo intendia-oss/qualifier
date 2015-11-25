@@ -10,10 +10,12 @@ import javax.annotation.Nullable;
 
 public interface ComparableQualifier<T> extends Qualifier<T> {
     Extension<Comparator<?>> COMPARABLE_COMPARATOR = Extension.key("comparable.comparator");
+    Comparator<?> TO_STRING_COMPARATOR = new NullsFirstComparator<>(comparing(Objects::toString));
 
     // TODO choose comparator in processor
     default Comparator<T> getTypeComparator() {
-        return data(COMPARABLE_COMPARATOR.as(), new NullsFirstComparator<>(comparing(Objects::toString)));
+        //noinspection unchecked
+        return data(COMPARABLE_COMPARATOR.as(), (Comparator<T>) TO_STRING_COMPARATOR);
     }
 
     default <F> Comparator<F> orderingOnResultOf(Function<F, ? extends T> function) {

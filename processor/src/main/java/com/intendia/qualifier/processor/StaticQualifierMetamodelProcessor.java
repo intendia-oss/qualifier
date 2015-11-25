@@ -1,6 +1,7 @@
 // Copyright 2013 Intendia, SL.
 package com.intendia.qualifier.processor;
 
+import static com.google.auto.common.MoreTypes.asTypeElement;
 import static com.google.common.base.CaseFormat.LOWER_CAMEL;
 import static com.google.common.base.CaseFormat.UPPER_CAMEL;
 import static com.google.common.base.CaseFormat.UPPER_UNDERSCORE;
@@ -9,6 +10,8 @@ import static com.google.common.base.Throwables.getCausalChain;
 import static com.google.common.base.Throwables.getStackTraceAsString;
 import static com.google.common.collect.FluentIterable.from;
 import static com.intendia.qualifier.processor.Metamodel.SELF;
+import static com.intendia.qualifier.processor.TypeHelper.getFlatName;
+import static com.intendia.qualifier.processor.TypeHelper.getQualifierName;
 import static com.squareup.javapoet.MethodSpec.methodBuilder;
 import static java.lang.String.format;
 import static java.util.Collections.unmodifiableCollection;
@@ -225,7 +228,7 @@ public class StaticQualifierMetamodelProcessor extends AbstractProcessor impleme
         // 'Class' refer full qualified name, 'Name' refer to simple class name
         final String beanName = beanHelper.getSimpleClassName();
         final ClassName beanClassName = ClassName.get(beanElement);
-        final ClassName metamodelName = ClassName.bestGuess(beanHelper.getFlatName() + "__");
+        final ClassName metamodelName = ClassName.bestGuess(getQualifierName(beanHelper.getFlatName()));
 
         // final JavaWriter writer = new JavaWriter(sourceWriter);
         final Collection<Metamodel> qualifiers = getPropertyDescriptors(beanHelper);
@@ -282,6 +285,9 @@ public class StaticQualifierMetamodelProcessor extends AbstractProcessor impleme
         // Property ex. ref: person.address, name: address, type: Address
         String propertyName = toLower(descriptor.name());
         TypeName propertyType = TypeName.get(descriptor.propertyType());
+        ClassName propertyQualifier =
+                descriptor.propertyType().asElement().getAnnotation(Qualify.class) == null ? null :
+                        ClassName.bestGuess(getQualifierName(getFlatName(descriptor.propertyElement())));
 
         // the qualifier representing the property, ex. PersonAddress
         ClassName qualifierType = ClassName.get(beanType.packageName(), beanType.simpleName() + toUpper(propertyName));
@@ -334,15 +340,6 @@ public class StaticQualifierMetamodelProcessor extends AbstractProcessor impleme
                     .build());
         }
 
-        // public PersonAddress address(){ return self.as(address); }
-//        if (!!descriptor.isProperty() && !RESERVED_PROPERTIES.contains(propertyName)) {
-//            writer.addMethod(MethodSpec.methodBuilder(propertyName)
-//                    .addModifiers(PUBLIC, STATIC)
-//                    .returns(qualifierType(beanType, propertyType))
-//                    .addStatement("return $N.as($N)", PropertyDescriptor.SELF, propertyName)
-//                    .build());
-//        }
-
         // Property context
         CodeBlock.Builder entries = CodeBlock.builder();
         final ImmutableList<Metaextension<?>> orderedExtensions = from(descriptor.extensions())
@@ -353,7 +350,11 @@ public class StaticQualifierMetamodelProcessor extends AbstractProcessor impleme
             entries.add(e.valueBlock().get());
             entries.add(";\n");
         }
-        entries.add("default: return null;\n");
+        if (propertyQualifier == null || !descriptor.isProperty()) {
+            entries.add("default: return null;\n", propertyType);
+        } else {
+            entries.add("default: return $T.self.data(key);\n", propertyQualifier);
+        }
 
         qualifier.addMethod(methodBuilder("data")
                 .addModifiers(PUBLIC)
@@ -474,6 +475,8 @@ public class StaticQualifierMetamodelProcessor extends AbstractProcessor impleme
             }
             return (DeclaredType) typeMirror;
         }
+
+        @Override public TypeElement propertyElement() { return asTypeElement(propertyType().asElement().asType()); }
 
         @Override public @Nullable ExecutableElement getterElement() { return getter; }
 

@@ -4,6 +4,7 @@ import static com.intendia.qualifier.ComparableQualifier.COMPARABLE_COMPARATOR;
 import static com.intendia.qualifier.example.ExampleModelExampleInner__.ExampleInnerMetadata;
 import static com.intendia.qualifier.example.ExampleModel__.ExampleModelMetadata;
 import static com.intendia.qualifier.example.ExampleModel__.stringListValue;
+import static java.util.Objects.requireNonNull;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 
@@ -78,5 +79,11 @@ public class ExampleProcessorExtensionTest {
         assertEquals("colorValue.name", qColor.getPath());
         assertEquals("name", qColor.getName());
         assertEquals("colorValue.override", qColor.getPath("override"));
+    }
+
+    @Test public void assert_property_resolution_works() {
+        Qualifier<ExampleModel> q = ExampleModelMetadata;
+        assertEquals("colorValue",requireNonNull(q.getProperty("colorValue")).getPath());
+        assertEquals("colorValue.name",requireNonNull(q.getProperty("colorValue.name")).getPath());
     }
 }

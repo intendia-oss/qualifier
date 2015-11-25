@@ -16,6 +16,8 @@ public interface Metamodel {
 
     DeclaredType propertyType();
 
+    TypeElement propertyElement();
+
     @Nullable ExecutableElement getterElement();
 
     @Nullable ExecutableElement setterElement();

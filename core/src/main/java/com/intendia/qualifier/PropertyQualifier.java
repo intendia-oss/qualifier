@@ -53,7 +53,13 @@ public interface PropertyQualifier<T, V> extends Qualifier<V> {
         return new CompositionPropertyQualifier<>(this, property);
     }
 
-    default <E> PropertyQualifier<T, V> override(Extension<E> extension, E value) {
+    default @Nullable PropertyQualifier<T, ?> compose(String name) {
+        PropertyQualifier<V, ?> property = getProperty(name);
+        return property == null ? null : compose(property);
+    }
+
+    // XXX GWT get confused if this.override2() overrides super.override()
+    default <E> PropertyQualifier<T, V> override2(Extension<E> extension, E value) {
         return str -> extension.getKey().equals(str) ? value : data(extension);
     }
 
@@ -79,14 +85,14 @@ class IdentityPropertyQualifier<X> implements PropertyQualifier<X, X> {
 }
 
 /**
- * The qualifiers f : X → Y and g : Y → Z can be composed to yield a qualifier which maps x in X to g(f(x)) in Z. The
- * resulting composite function is denoted g ∘ f : X → Z
+ * The property qualifiers f : X → Y and g : Y → Z can be composed to yield a qualifier which maps x in X to g(f(x)) in
+ * Z. The resulting composite function is denoted g ∘ f : X → Z and has the qualifier type Z.
  */
-class CompositionPropertyQualifier<X, Y, Z> implements PropertyQualifier<X, Y> {
-    private final PropertyQualifier<X, Z> f;
-    private final PropertyQualifier<? super Z, Y> g;
+class CompositionPropertyQualifier<X, Y, Z> implements PropertyQualifier<X, Z> {
+    private final PropertyQualifier<X, Y> f;
+    private final PropertyQualifier<? super Y, Z> g;
 
-    CompositionPropertyQualifier(PropertyQualifier<X, Z> f, PropertyQualifier<? super Z, Y> g) {
+    CompositionPropertyQualifier(PropertyQualifier<X, Y> f, PropertyQualifier<? super Y, Z> g) {
         this.f = f;
         this.g = g;
     }
@@ -97,17 +103,17 @@ class CompositionPropertyQualifier<X, Y, Z> implements PropertyQualifier<X, Y> {
 
     @Override public String getPath() { return f.getPath() + "." + g.getPath(); }
 
-    @Override public Class<Y> getType() { return g.getType(); }
+    @Override public Class<Z> getType() { return g.getType(); }
 
     @Override public Class<?>[] getGenerics() { return g.getGenerics(); }
 
-    @Override @Nullable public Y get(X object) {
-        Z value = f.get(object); if (value == null) return null; return g.get(value);
+    @Override @Nullable public Z get(X object) {
+        Y value = f.get(object); if (value == null) return null; return g.get(value);
     }
 
     @Override public Boolean isReadable() { return f.isReadable() && g.isReadable(); }
 
-    @Override public void set(X object, Y value) { g.set(f.get(object), value); }
+    @Override public void set(X object, Z value) { g.set(f.get(object), value); }
 
     @Override public Boolean isWritable() { return f.isWritable() && g.isWritable(); }
 

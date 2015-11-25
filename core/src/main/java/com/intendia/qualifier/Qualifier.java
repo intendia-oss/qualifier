@@ -25,14 +25,19 @@ public interface Qualifier<V> extends Metadata {
     default Collection<PropertyQualifier<V, ?>> getProperties() { return data(CORE_PROPERTIES.as(), emptySet()); }
 
     default @Nullable PropertyQualifier<V, ?> getProperty(String name) {
+        if (name.isEmpty()) throw new IllegalArgumentException("not empty name required");
+        String[] split = name.split("\\.", 2);
         for (PropertyQualifier<V, ?> property : getProperties()) {
-            if (name.equals(property.getName())) return property;
+            if (split[0].equals(property.getName())) {
+                System.out.println("resolving name=" + name + ", with property " + property);
+                return split.length == 1 ? property : property.compose(split[1]);
+            }
         }
         return null;
     }
 
     //XXX experimental: utility to override one extension value
-    default <E> Qualifier<V> override(Extension<E> extension, E value){
+    default <E> Qualifier<V> override(Extension<E> extension, E value) {
         return str -> extension.getKey().equals(str) ? value : data(extension);
     }
 }
