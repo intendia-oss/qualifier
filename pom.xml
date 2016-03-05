@@ -23,7 +23,6 @@
     <modules>
         <module>core</module>
         <module>processor</module>
-        <module>examples</module>
     </modules>
 
     <distributionManagement>
