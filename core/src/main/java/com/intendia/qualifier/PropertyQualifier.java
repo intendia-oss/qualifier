@@ -17,6 +17,7 @@ public interface PropertyQualifier<T, V> extends Qualifier<V> {
     Extension<Boolean> PROPERTY_READABLE = Extension.key("property.readable");
     Extension<BiConsumer<?, ?>> PROPERTY_SETTER = Extension.key("property.setter");
     Extension<Boolean> PROPERTY_WRITABLE = Extension.key("property.writable");
+    Extension<Comparator<?>> PROPERTY_COMPARATOR = Extension.key("property.comparator");
 
     default String getPath() { return data(PROPERTY_PATH, ""); }
 
@@ -45,7 +46,7 @@ public interface PropertyQualifier<T, V> extends Qualifier<V> {
     default Boolean isWritable() { return data(PROPERTY_WRITABLE, Boolean.FALSE); }
 
     default Comparator<T> getPropertyComparator() {
-        return ComparableQualifier.of(this).orderingOnResultOf(this::get);
+        return data(PROPERTY_COMPARATOR.<Comparator<T>>as(), ComparableQualifier.of(this).orderingOnResultOf(this::get));
     }
 
     /** Traverse a qualifier returning a new qualifier which has source type this and value type property. */
