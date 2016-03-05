@@ -1,18 +1,13 @@
 // Copyright 2013 Intendia, SL.
 package com.intendia.qualifier;
 
-import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Strings.isNullOrEmpty;
 
 import com.google.common.annotations.Beta;
-import com.google.common.base.Function;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
-import com.google.common.collect.FluentIterable;
-import com.google.common.collect.Maps;
 import com.google.gwt.cell.client.Cell;
-import com.google.gwt.core.client.GWT;
 import com.google.gwt.text.shared.Renderer;
 import com.google.gwt.text.shared.SafeHtmlRenderer;
 import com.google.inject.Inject;
@@ -22,7 +17,6 @@ import com.intendia.qualifier.ResourceProvider.HtmlRendererResourceProvider;
 import com.intendia.qualifier.ResourceProvider.TextRendererResourceProvider;
 import java.util.Date;
 import java.util.Map;
-import java.util.Set;
 import javax.inject.Provider;
 
 /**
@@ -35,51 +29,25 @@ import javax.inject.Provider;
 public interface QualifierManager {
 
     /**
-     * Return the metamodel bean qualifier representing the bean.
-     * 
-     * @param cls the type of the represented bean or the type of the bean qualifier
-     * @throws IllegalArgumentException if not a qualified bean
-     */
-    public abstract <T> BeanQualifier<T> getBeanQualifier(Class<T> cls);
-
-    /**
-     * Return the metamodel bean qualifiers.
-     */
-    public abstract Set<? extends BeanQualifier<?>> getBeanQualifiers();
-
-    /**
      * Return the renderer associated with the name token. Used to generate plain text representations.
      */
-    public abstract <T> Renderer<T> createRenderer(Qualifier<?, T> qualifier, String name);
+    <T> Renderer<T> createRenderer(Qualifier<?, T> qualifier, String name);
 
     /**
      * Return the safe html renderer associated with the name token. Used to generate html representations.
      */
-    public abstract <T> SafeHtmlRenderer<T> createSafeHtmlRenderer(Qualifier<?, T> qualifier, String name);
+    <T> SafeHtmlRenderer<T> createSafeHtmlRenderer(Qualifier<?, T> qualifier, String name);
 
     /**
      * Return the cell associated with the name token. Used to generate cell representations.
      */
-    public abstract <T> Cell<T> createCell(Qualifier<?, T> qualifier, String name);
+    <T> Cell<T> createCell(Qualifier<?, T> qualifier, String name);
 
-    @Singleton
-    static class StandardQualifierManager implements QualifierManager {
-
-        protected static final StaticQualifierLoader STATIC_QUALIFIER_LOADER = GWT.create(StaticQualifierLoader.class);
-        // TODO use ClassToInstanceMap
-        private final Map<Class<? extends BeanQualifier<?>>, BeanQualifier<?>> qualifierToInstance = Maps.newHashMap();
-        private final Map<Class<?>, Class<? extends BeanQualifier<?>>> beanToQualifier = Maps.newHashMap();
+    @Singleton class StandardQualifierManager implements QualifierManager {
 
         Supplier<Map<String, TextRendererResourceProvider>> textRenderers;
         Supplier<Map<String, HtmlRendererResourceProvider>> htmlRenderers;
         Supplier<Map<String, CellRendererResourceProvider>> cellRenderers;
-
-        StandardQualifierManager() {
-            qualifierToInstance.putAll(STATIC_QUALIFIER_LOADER.getBeanQualifiers());
-            for (Class<? extends BeanQualifier<?>> qualifierClass : qualifierToInstance.keySet()) {
-                beanToQualifier.put(qualifierToInstance.get(qualifierClass).getType(), qualifierClass);
-            }
-        }
 
         @Inject
         void inject(
@@ -107,30 +75,6 @@ public interface QualifierManager {
             });
         }
 
-        /**
-         * Return the instance metamodel.
-         * 
-         * @param cls the type of the metamodel
-         */
-        public <Q extends BeanQualifier<?>> Q materialize(Class<Q> cls) {
-            @SuppressWarnings("unchecked") final Q entityType = (Q) qualifierToInstance.get(cls);
-            if (entityType == null) {
-                throw new IllegalArgumentException("Not a bean qualifier: " + cls);
-            }
-            return entityType;
-        }
-
-        @Override
-        public Set<? extends BeanQualifier<?>> getBeanQualifiers() {
-            return FluentIterable.from(beanToQualifier.values())
-                    .transform(new Function<Class<? extends BeanQualifier<?>>, BeanQualifier<?>>() {
-                        @Override
-                        public BeanQualifier<?> apply(Class<? extends BeanQualifier<?>> input) {
-                            return qualifierToInstance.get(input);
-                        }
-                    }).toSet();
-        }
-        
         public <T extends ResourceProvider> T getResourceProvider(Class<T> type, String name) {
             return checkNotNull(doGetResourceProvider(type, name),
                     "Resource provider [type: %s, key: %s] not found", type, name);
@@ -163,16 +107,6 @@ public interface QualifierManager {
         @SuppressWarnings("unchecked")
         public <V> Cell<V> createCell(Qualifier<?, V> qualifier, String name) {
             return getResourceProvider(CellRendererResourceProvider.class, name).get(qualifier);
-        }
-
-        @Override
-        public <T> BeanQualifier<T> getBeanQualifier(Class<T> cls) {
-            final Class<? extends BeanQualifier<?>> qualifier = beanToQualifier.get(cls);
-            checkArgument(qualifier != null, "Not a qualified class: " + cls);
-            final BeanQualifier<?> materialize = materialize(qualifier);
-            @SuppressWarnings({ "ConstantConditions", "unchecked", "UnnecessaryLocalVariable" })//
-            final BeanQualifier<T> beanQualifier = (BeanQualifier<T>) materialize;
-            return beanQualifier;
         }
     }
 
