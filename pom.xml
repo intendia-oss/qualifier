@@ -2,7 +2,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.intendia.qualifier</groupId>
     <artifactId>qualifier-parent</artifactId>
-    <version>0.8</version>
+    <version>0.8.1-SNAPSHOT</version>
     <name>Qualifier (Parent)</name>
     <packaging>pom</packaging>
 
@@ -24,7 +24,6 @@
         <module>core</module>
         <module>processor</module>
         <module>examples</module>
-        <module>extensions</module>
     </modules>
 
     <distributionManagement>

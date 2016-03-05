@@ -44,7 +44,7 @@ import javax.tools.Diagnostic;
 @SuppressWarnings("UnusedDeclaration")
 public class ReflectionHelper {
 
-    static final String SELF = "self";
+    public static final String SELF = "self";
     private final TypeElement classRepresenter;
     private final ProcessingEnvironment environment;
     private final List<QualifierProcessorExtension> processorExtensions;
