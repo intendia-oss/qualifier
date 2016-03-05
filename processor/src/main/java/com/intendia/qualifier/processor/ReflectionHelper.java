@@ -473,7 +473,7 @@ public class ReflectionHelper {
         private final TypeMirror type;
         private final Object value;
 
-        private QualifyExtensionData(String key, TypeMirror type, Object value) {
+        public QualifyExtensionData(String key, TypeMirror type, Object value) {
             this.key = key;
             this.type = type;
             this.value = value;
