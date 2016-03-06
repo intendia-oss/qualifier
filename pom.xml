@@ -102,7 +102,7 @@
             <dependency>
                 <groupId>com.intendia.measure</groupId>
                 <artifactId>measure-gwt</artifactId>
-                <version>0.1</version>
+                <version>0.2</version>
             </dependency>
             <dependency>
                 <groupId>com.google.gwt.inject</groupId>
