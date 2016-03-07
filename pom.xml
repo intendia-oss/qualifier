@@ -95,11 +95,6 @@
                 <version>${project.version}</version>
             </dependency>
             <dependency>
-                <groupId>com.intendia.qualifier</groupId>
-                <artifactId>qualifier-extensions</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-            <dependency>
                 <groupId>com.intendia.measure</groupId>
                 <artifactId>measure-gwt</artifactId>
                 <version>0.2</version>
@@ -183,6 +178,11 @@
                 <groupId>junit</groupId>
                 <artifactId>junit</artifactId>
                 <version>4.11</version>
+            </dependency>
+            <dependency>
+                <groupId>com.google.inject</groupId>
+                <artifactId>guice</artifactId>
+                <version>4.0</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
