@@ -69,6 +69,8 @@ public interface PropertyQualifier<T, V> extends Qualifier<V> {
     static <V> PropertyQualifier<?, V> of(Qualifier<V> q) {
         return q instanceof PropertyQualifier ? (PropertyQualifier<?, V>) q : q::data;
     }
+
+    @Deprecated default V apply(T t) { return get(t); }
 }
 
 class IdentityPropertyQualifier<X> implements PropertyQualifier<X, X> {
