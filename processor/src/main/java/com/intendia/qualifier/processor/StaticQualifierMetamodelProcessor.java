@@ -1,7 +1,9 @@
 // Copyright 2013 Intendia, SL.
 package com.intendia.qualifier.processor;
 
+import static com.google.auto.common.MoreTypes.asDeclared;
 import static com.google.auto.common.MoreTypes.asTypeElement;
+import static com.google.auto.common.MoreTypes.isTypeOf;
 import static com.google.common.base.CaseFormat.LOWER_CAMEL;
 import static com.google.common.base.CaseFormat.UPPER_CAMEL;
 import static com.google.common.base.CaseFormat.UPPER_UNDERSCORE;
@@ -55,6 +57,8 @@ import com.squareup.javapoet.TypeSpec;
 import com.squareup.javapoet.WildcardTypeName;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.Collection;
@@ -179,22 +183,51 @@ public class StaticQualifierMetamodelProcessor extends AbstractProcessor impleme
                     String pLCName = method.getSimpleName().toString();
                     String pUUName = LOWER_CAMEL.converterTo(UPPER_UNDERSCORE).convert(pLCName);
                     String pUCName = LOWER_CAMEL.converterTo(UPPER_CAMEL).convert(pLCName);
-                    String eName = qUUName + "_" + pUUName;
-                    TypeMirror returnType = method.getReturnType();
-                    if (returnType instanceof PrimitiveType) {
-                        returnType = types().boxedClass((PrimitiveType) returnType).asType();
+                    TypeMirror pRetType = method.getReturnType();
+                    if (pRetType.getKind().isPrimitive()) {
+                        pRetType = types().boxedClass((PrimitiveType) pRetType).asType();
                     }
-                    //Extension<Unit<?>> MEASURE_UNIT_OF_MEASURE = Extension.key("measure.unit");
+
+                    String eName = qUUName + "_" + pUUName;
+                    String kName = eName + "_KEY";
+                    //String MEASURE_UNIT_OF_MEASURE_KEY = "measure.unit";
+                    qualifier.addField(FieldSpec.builder(LANG_STRING, kName, PUBLIC, STATIC, FINAL)
+                            .initializer("$S", qLCName + "." + pLCName)
+                            .build());
+                    //Extension<Unit<?>> MEASURE_UNIT_OF_MEASURE = Extension.key(MEASURE_UNIT_OF_MEASURE_KEY);
                     qualifier.addField(FieldSpec.builder(ParameterizedTypeName.get(
-                            ClassName.get(Extension.class), TypeName.get(returnType)), eName, PUBLIC, STATIC, FINAL)
-                            .initializer("$T.key($S)", Extension.class, qLCName + "." + pLCName)
+                            ClassName.get(Extension.class), TypeName.get(pRetType)), eName, PUBLIC, STATIC, FINAL)
+                            .initializer("$T.key($L)", Extension.class, kName)
                             .build());
                     //default Unit<?> unit() { return data(MEASURE_UNIT_OF_MEASURE, Unit.ONE); }
                     qualifier.addMethod(methodBuilder("get" + qUCName + pUCName)
                             .addModifiers(DEFAULT, PUBLIC)
-                            .returns(TypeName.get(returnType))
+                            .returns(TypeName.get(pRetType))
                             .addStatement("return data($N)", eName)
                             .build());
+
+                    //Extra extensions for '@Qualify.Link Class<?>' types
+                    boolean isLink = pRetType.getAnnotationMirrors().stream()
+                            .anyMatch(a -> isTypeOf(Qualify.Link.class, a.getAnnotationType()));
+                    if (isLink && MoreTypes.isTypeOf(Class.class, pRetType)) {
+                        String q_eName = eName + "_QUALIFIER";
+                        String q_kName = eName + "_QUALIFIER_KEY";
+                        TypeName q_valTypeName = TypeName.get(asDeclared(pRetType).getTypeArguments().get(0));
+                        TypeName q_qTypeName = ParameterizedTypeName.get(ClassName.get(Qualifier.class), q_valTypeName);
+                        TypeName q_eTypeName = ParameterizedTypeName.get(ClassName.get(Extension.class), q_qTypeName);
+
+                        qualifier.addField(FieldSpec.builder(LANG_STRING, q_kName, PUBLIC, STATIC, FINAL)
+                                .initializer("$S", qLCName + "." + pLCName + ".qualifier")
+                                .build());
+                        qualifier.addField(FieldSpec.builder(q_eTypeName, q_eName, PUBLIC, STATIC, FINAL)
+                                .initializer("$T.key($L)", Extension.class, q_kName)
+                                .build());
+                        qualifier.addMethod(methodBuilder("get" + qUCName + pUCName + "Qualifier")
+                                .addModifiers(DEFAULT, PUBLIC)
+                                .returns(q_qTypeName)
+                                .addStatement("return data($N.as())", q_eName)
+                                .build());
+                    }
                 }
 
                 // static XxQualifier of(Metadata q) { return q instanceof XxQualifier ? (XxQualifier) q : q::data; }
@@ -452,7 +485,7 @@ public class StaticQualifierMetamodelProcessor extends AbstractProcessor impleme
 
         public MirroringMetamodel(TypeElement beanElement, String name) {
             this.beanElement = beanElement;
-            this.beanType = MoreTypes.asDeclared(beanElement().asType());
+            this.beanType = asDeclared(beanElement().asType());
             this.name = name;
             this.metaqualifier = new LocalMetadata();
         }

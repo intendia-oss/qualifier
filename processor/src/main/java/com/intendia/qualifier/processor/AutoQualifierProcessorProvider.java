@@ -2,12 +2,16 @@
 package com.intendia.qualifier.processor;
 
 import static com.google.auto.common.AnnotationMirrors.getAnnotatedAnnotations;
+import static com.google.auto.common.MoreTypes.isTypeOf;
 import static com.google.common.base.CaseFormat.LOWER_CAMEL;
 import static com.google.common.base.CaseFormat.UPPER_CAMEL;
+import static com.intendia.qualifier.processor.TypeHelper.getFlatName;
+import static com.intendia.qualifier.processor.TypeHelper.getQualifierName;
 import static javax.lang.model.element.Modifier.PUBLIC;
 
 import com.intendia.qualifier.Extension;
 import com.intendia.qualifier.annotation.Qualify;
+import com.intendia.qualifier.annotation.Qualify.Link;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.CodeBlock;
 import com.squareup.javapoet.MethodSpec;
@@ -22,6 +26,8 @@ import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.AnnotationValue;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ExecutableElement;
+import javax.lang.model.element.TypeElement;
+import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.PrimitiveType;
 import javax.lang.model.type.TypeMirror;
 
@@ -43,26 +49,37 @@ public class AutoQualifierProcessorProvider extends QualifierProcessorServicePro
             String aLCName = UPPER_CAMEL.converterTo(LOWER_CAMEL).convert(aUCName);
             Map<? extends ExecutableElement, ? extends AnnotationValue> values = aMirror.getElementValues();
             for (ExecutableElement e : values.keySet()) {
-                String pLCName = e.getSimpleName().toString();
-                String pUCName = LOWER_CAMEL.converterTo(UPPER_CAMEL).convert(pLCName);
-                String key = aLCName + "." + pLCName;
-                Metaextension<Object> extension = metaqualifier.use(key, values.get(e).getValue());
-                CodeBlock valueBlock = extension.valueBlock().get();
-                String methodName = "get" + aUCName + pUCName;
-                extension.valueBlock(methodName + "()");
-
                 metaqualifier.value(autoMethods).ifPresent(am -> {
-                    TypeMirror returnType = e.getReturnType();
-                    if (returnType instanceof PrimitiveType) {
-                        returnType = types().boxedClass((PrimitiveType) returnType).asType();
+                    String pLCName = e.getSimpleName().toString();
+                    String pUCName = LOWER_CAMEL.converterTo(UPPER_CAMEL).convert(pLCName);
+                    TypeMirror pRetType = e.getReturnType();
+                    if (pRetType.getKind().isPrimitive()) {
+                        pRetType = types().boxedClass((PrimitiveType) pRetType).asType();
                     }
+
+                    String key = aLCName + "." + pLCName;
+                    Object value = values.get(e).getValue();
+
+                    Metaextension<Object> extension = metaqualifier.use(key, value);
+                    CodeBlock valueBlock = extension.valueBlock().get();
+                    String methodName = "get" + aUCName + pUCName;
+                    extension.valueBlock(methodName + "()");
+
                     am.add(MethodSpec.methodBuilder(methodName)
                             .addModifiers(PUBLIC)
-                            .returns(TypeName.get(returnType))
+                            .returns(TypeName.get(pRetType))
                             .addCode("return ")
                             .addCode(valueBlock)
                             .addCode(";\n")
                             .build());
+
+                    boolean isLink = pRetType.getAnnotationMirrors().stream()
+                            .anyMatch(a -> isTypeOf(Link.class, a.getAnnotationType()));
+                    if (isLink && isTypeOf(Class.class, pRetType)) {
+                        String c_key = aLCName + "." + pLCName + ".qualifier";
+                        String c_valType = getFlatName((TypeElement) types().asElement((DeclaredType) value));
+                        metaqualifier.literal(c_key, "$T.self", ClassName.bestGuess(getQualifierName(c_valType)));
+                    }
                 });
                 metaqualifier.value(autoAnnotations).ifPresent(aq ->
                         aq.add(ClassName.bestGuess(packageName + "." + aUCName + "Qualifier")));

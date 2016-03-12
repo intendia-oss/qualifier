@@ -47,6 +47,16 @@ public class ExampleProcessorExtensionTest {
         assertEquals(String.class, q.data(Extension.<Class<?>>key("extension.class")));
     }
 
+    @Test public void assert_that_auto_qualifier_works() {
+        Object expectedType = ExampleModel.ExampleInnerInterface.class;
+        Object expectedLink = ExampleModelExampleInnerInterface__.self;
+        assertEquals(TimeUnit.SECONDS, ExampleModel__.stringValue.data("exampleAuto.enumeration"));
+        assertEquals(1, ExampleModel__.stringValue.data("exampleAuto.integer"));
+        assertEquals("s", ExampleModel__.stringValue.data("exampleAuto.string"));
+        assertEquals(expectedType, ExampleModel__.stringValue.data("exampleAuto.type"));
+        assertEquals(expectedLink, ExampleModel__.stringValue.data("exampleAuto.type.qualifier"));
+    }
+
     @Test public void test_works() throws Exception {
         assertNotNull(ExampleModelMetadata);
         assertNotNull(ExampleInnerMetadata);
