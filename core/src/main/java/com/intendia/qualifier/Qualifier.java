@@ -33,7 +33,6 @@ public interface Qualifier<V> extends Metadata {
         String[] split = name.split("\\.", 2);
         for (PropertyQualifier<V, ?> property : getProperties()) {
             if (split[0].equals(property.getName())) {
-                System.out.println("resolving name=" + name + ", with property " + property);
                 return split.length == 1 ? property : property.compose(split[1]);
             }
         }

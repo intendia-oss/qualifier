@@ -35,21 +35,28 @@ public interface PropertyQualifier<T, V> extends Qualifier<V> {
 
     /** @throws RuntimeException if not {@link #isReadable()} */
     default Function<T, V> getGetter() {
-        return requireNonNull(data(PROPERTY_GETTER.as()), "property " + getName() + " is not readable");
+        return requireNonNull(data(PROPERTY_GETTER.as()),
+                "property " + getType() + "." + getName() + " is not readable");
     }
 
     default Boolean isReadable() { return data(PROPERTY_GETTER) != null; }
 
     /** @throws RuntimeException if not {@link #isWritable()} */
     default BiConsumer<T, V> getSetter() {
-        return requireNonNull(data(PROPERTY_SETTER.as()), "property " + getName() + " is not writable");
+        return requireNonNull(data(PROPERTY_SETTER.as()),
+                "property " + getType() + "." + getName() + " is not writable");
     }
 
     default Boolean isWritable() { return data(PROPERTY_SETTER) != null; }
 
     default Comparator<T> getPropertyComparator() {
-        return data(PROPERTY_COMPARATOR.<Comparator<T>>as(), (Supplier<Comparator<T>>)
-                () -> ComparableQualifier.of(this).orderingOnResultOf(getGetter()));
+        //noinspection Convert2Lambda IGP-1732 GWT optimize incompatible
+        return data(PROPERTY_COMPARATOR.<Comparator<T>>as(), new Supplier<Comparator<T>>() {
+            @Override public Comparator<T> get() {
+                return ComparableQualifier.of(PropertyQualifier.this)
+                        .orderingOnResultOf(PropertyQualifier.this.getGetter());
+            }
+        });
     }
 
     /** Traverse a qualifier returning a new qualifier which has source type this and value type property. */
@@ -84,11 +91,15 @@ class IdentityPropertyQualifier<X> implements PropertyQualifier<X, X> {
     }
 
     @Override public @Nullable Object data(String key) {
-        return f.data(key);
+        switch (key) {
+            case PROPERTY_GETTER_KEY: return getGetter();
+            case PROPERTY_COMPARATOR_KEY: return getPropertyComparator();
+            default: return f.data(key);
+        }
     }
 
     @Override public Function<X, X> getGetter() {
-        return o -> o;
+        return Function.identity();
     }
 
     @Override public Comparator<X> getPropertyComparator() {
@@ -103,54 +114,66 @@ class IdentityPropertyQualifier<X> implements PropertyQualifier<X, X> {
 class CompositionPropertyQualifier<X, Y, Z> implements PropertyQualifier<X, Z> {
     private final PropertyQualifier<X, Y> f;
     private final PropertyQualifier<? super Y, Z> g;
+    private final Function<X, Z> getter;
+    private final BiConsumer<X, Z> setter;
 
     CompositionPropertyQualifier(PropertyQualifier<X, Y> f, PropertyQualifier<? super Y, Z> g) {
         this.f = f;
         this.g = g;
+
+        if (f.isReadable() && g.isReadable()) {
+            Function<X, Y> fGetter = f.getGetter();
+            Function<? super Y, Z> gGetter = g.getGetter();
+            this.getter = x -> {
+                Y y = fGetter.apply(x);
+                return y == null ? null : gGetter.apply(y);
+            };
+        } else this.getter = null;
+
+        if (f.isReadable() && g.isWritable()) {
+            BiConsumer<? super Y, Z> gSetter = g.getSetter();
+            Function<X, Y> fGetter = f.getGetter();
+            this.setter = (x, z) -> {
+                Y y = requireNonNull(fGetter.apply(x), "property " + f.getType() + "." + f.getName() + " required "
+                        + "to set composed property " + g.getType() + "." + g.getName());
+                gSetter.accept(y, z);
+            };
+        } else this.setter = null;
     }
 
     @Override public @Nullable Object data(String key) {
-        return g.data(key);
+        switch (key) {
+            case CORE_NAME_KEY: return getName();
+            case CORE_TYPE_KEY: return getType();
+            case CORE_GENERICS_KEY: return getGenerics();
+            case PROPERTY_PATH_KEY: return getPath();
+            case PROPERTY_GETTER_KEY: return getter;
+            case PROPERTY_SETTER_KEY: return setter;
+            case PROPERTY_COMPARATOR_KEY: return getPropertyComparator();
+            default: return g.data(key);
+        }
     }
 
     @Override public String getName() {
         return g.getName();
     }
 
-    @Override public String getPath() {
-        return f.getPath() + "." + g.getPath();
-    }
-
     @Override public Class<Z> getType() {
         return g.getType();
+    }
+
+    @Override public String getPath() {
+        return f.getPath() + "." + g.getPath();
     }
 
     @Override public Class<?>[] getGenerics() {
         return g.getGenerics();
     }
 
-    @Override public Function<X, Z> getGetter() {
-        return f.getGetter().andThen(g.getGetter());
-    }
-
-    @Override public Boolean isReadable() {
-        return f.isReadable() && g.isReadable();
-    }
-
-    @Override public BiConsumer<X, Z> getSetter() {
-        BiConsumer<? super Y, Z> gSetter = g.getSetter();
-        Function<X, Y> fGetter = f.getGetter();
-        return (x, z) -> gSetter.accept(fGetter.apply(x), z);
-    }
-
-    @Override public Boolean isWritable() {
-        return f.isReadable() && g.isWritable();
-    }
-
     @Override public Comparator<X> getPropertyComparator() {
         Function<X, Y> fGetter = f.getGetter();
-        Comparator<? super Y> fPropertyComparator = g.getPropertyComparator();
-        return (o1, o2) -> fPropertyComparator.compare(
+        Comparator<? super Y> gPropertyComparator = g.getPropertyComparator();
+        return (o1, o2) -> gPropertyComparator.compare(
                 o1 == null ? null : fGetter.apply(o1),
                 o2 == null ? null : fGetter.apply(o2));
     }

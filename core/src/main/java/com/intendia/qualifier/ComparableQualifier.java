@@ -45,6 +45,10 @@ final class NullsFirstComparator<T> implements Comparator<T> {
         return comparator.compare(left, right);
     }
 
+    @Override public String toString() {
+        return comparator + ".nullsFirst()";
+    }
+
     static final int LEFT_IS_GREATER = 1;
     static final int RIGHT_IS_GREATER = -1;
 }
