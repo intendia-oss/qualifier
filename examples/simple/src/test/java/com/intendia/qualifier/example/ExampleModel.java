@@ -18,9 +18,11 @@ import java.util.concurrent.TimeUnit;
         @QualifyExtension(key = "extension.class", type = Class.class, value = "java.lang.String"),
 })
 public interface ExampleModel {
-    @ExampleAuto(string = "s", type = ExampleInnerInterface.class, integer = 1, enumeration = SECONDS)
+    @ExampleAuto(string = "s", type = ExampleInnerInterface.class, link = Color.class, integer = 1, enumeration = SECONDS)
     @ExampleManual(string = "s", type = ExampleInnerInterface.class, integer = 1, enumeration = SECONDS) //
     String getStringValue();
+
+    void setStringValue(String stringValue);
 
     List<String> getStringListValue();
 
@@ -28,13 +30,23 @@ public interface ExampleModel {
 
     @Qualify class ExampleInner {}
 
-    @ExampleAuto(string = "s", type = ExampleInnerInterface.class, integer = 1, enumeration = SECONDS)
+    @ExampleAuto(string = "s", type = ExampleInnerInterface.class, link = Color.class, integer = 1, enumeration = SECONDS)
     @ExampleManual(string = "s", type = ExampleInnerInterface.class, integer = 1, enumeration = SECONDS)
     @Qualify interface ExampleDependant extends Predicate<ExampleInnerInterface> {}
 
-    @Qualify interface ExampleInnerInterface {
-        List<String> getVehicleParam();
+    class Category {
+        public static String getCategoryString(ExampleModel o) {
+            return o.getStringValue();
+        }
 
-        void setVehicleParam(List<String> vehicleParam);
+        public static void setCategoryString(ExampleModel o, String v) {
+            o.setStringValue(v);
+        }
+    }
+
+    @Qualify interface ExampleInnerInterface {
+        List<String> getInnerListValue();
+
+        void setInnerListValue(List<String> innerListValue);
     }
 }

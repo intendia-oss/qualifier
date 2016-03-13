@@ -11,11 +11,23 @@ public class ExampleModelImpl implements ExampleModel {
     Double doubleValue;
     Color color;
 
-    @Override public String getStringValue() { return stringValue; }
+    @Override public String getStringValue() {
+        return stringValue;
+    }
 
-    @Override public List<String> getStringListValue() { return stringListValue; }
+    @Override public void setStringValue(String stringValue) {
+        this.stringValue = stringValue;
+    }
 
-    @Override public Color getColorValue() { return color; }
+    @Override public List<String> getStringListValue() {
+        return stringListValue;
+    }
 
-    public Double getDoubleValue() { return doubleValue; }
+    @Override public Color getColorValue() {
+        return color;
+    }
+
+    public Double getDoubleValue() {
+        return doubleValue;
+    }
 }

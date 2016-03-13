@@ -9,7 +9,8 @@ import java.util.function.Function;
 import javax.annotation.Nullable;
 
 public interface ComparableQualifier<T> extends Qualifier<T> {
-    Extension<Comparator<?>> COMPARABLE_COMPARATOR = Extension.key("comparable.comparator");
+    String COMPARABLE_COMPARATOR_KEY = "comparable.comparator";
+    Extension<Comparator<?>> COMPARABLE_COMPARATOR = Extension.key(COMPARABLE_COMPARATOR_KEY);
     Comparator<?> TO_STRING_COMPARATOR = new NullsFirstComparator<>(comparing(Objects::toString));
 
     // TODO choose comparator in processor

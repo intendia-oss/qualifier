@@ -49,12 +49,12 @@ public class ExampleProcessorExtensionTest {
 
     @Test public void assert_that_auto_qualifier_works() {
         Object expectedType = ExampleModel.ExampleInnerInterface.class;
-        Object expectedLink = ExampleModelExampleInnerInterface__.self;
+        Object expectedLink = Color__.self;
         assertEquals(TimeUnit.SECONDS, ExampleModel__.stringValue.data("exampleAuto.enumeration"));
         assertEquals(1, ExampleModel__.stringValue.data("exampleAuto.integer"));
         assertEquals("s", ExampleModel__.stringValue.data("exampleAuto.string"));
         assertEquals(expectedType, ExampleModel__.stringValue.data("exampleAuto.type"));
-        assertEquals(expectedLink, ExampleModel__.stringValue.data("exampleAuto.type.qualifier"));
+        assertEquals(expectedLink, ExampleModel__.stringValue.data("exampleAuto.link"));
     }
 
     @Test public void test_works() throws Exception {

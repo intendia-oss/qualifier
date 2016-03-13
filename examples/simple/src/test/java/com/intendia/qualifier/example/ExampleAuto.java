@@ -13,8 +13,10 @@ public @interface ExampleAuto {
 
     int integer();
 
-    @Qualify.Link
     Class<?> type();
+
+    @Qualify.Link
+    Class<?> link();
 
     TimeUnit enumeration();
 }

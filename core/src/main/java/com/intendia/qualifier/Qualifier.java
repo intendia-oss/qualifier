@@ -9,10 +9,14 @@ import javax.annotation.Nullable;
 @FunctionalInterface
 @SuppressWarnings("ClassReferencesSubclass")
 public interface Qualifier<V> extends Metadata {
-    Extension<String> CORE_NAME = Extension.key("core.name");
-    Extension<Class<?>> CORE_TYPE = Extension.key("core.type");
-    Extension<Class<?>[]> CORE_GENERICS = Extension.key("core.generics");
-    Extension<Collection<? extends PropertyQualifier<?, ?>>> CORE_PROPERTIES = Extension.key("core.properties");
+    String CORE_NAME_KEY = "core.name";
+    String CORE_TYPE_KEY = "core.type";
+    String CORE_GENERICS_KEY = "core.generics";
+    String CORE_PROPERTIES_KEY = "core.properties";
+    Extension<String> CORE_NAME = Extension.key(CORE_NAME_KEY);
+    Extension<Class<?>> CORE_TYPE = Extension.key(CORE_TYPE_KEY);
+    Extension<Class<?>[]> CORE_GENERICS = Extension.key(CORE_GENERICS_KEY);
+    Extension<Collection<? extends PropertyQualifier<?, ?>>> CORE_PROPERTIES = Extension.key(CORE_PROPERTIES_KEY);
     Class<?>[] NO_GENERICS = new Class[0];
 
     default String getName() { return data(CORE_NAME); }

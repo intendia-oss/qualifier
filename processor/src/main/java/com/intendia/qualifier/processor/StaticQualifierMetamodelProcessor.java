@@ -3,7 +3,6 @@ package com.intendia.qualifier.processor;
 
 import static com.google.auto.common.MoreTypes.asDeclared;
 import static com.google.auto.common.MoreTypes.asTypeElement;
-import static com.google.auto.common.MoreTypes.isTypeOf;
 import static com.google.common.base.CaseFormat.LOWER_CAMEL;
 import static com.google.common.base.CaseFormat.UPPER_CAMEL;
 import static com.google.common.base.CaseFormat.UPPER_UNDERSCORE;
@@ -43,6 +42,7 @@ import com.intendia.qualifier.Metadata;
 import com.intendia.qualifier.PropertyQualifier;
 import com.intendia.qualifier.Qualifier;
 import com.intendia.qualifier.annotation.Qualify;
+import com.intendia.qualifier.annotation.Qualify.Link;
 import com.intendia.qualifier.annotation.QualifyExtension;
 import com.intendia.qualifier.annotation.SkipStaticQualifierMetamodelGenerator;
 import com.squareup.javapoet.AnnotationSpec;
@@ -57,8 +57,6 @@ import com.squareup.javapoet.TypeSpec;
 import com.squareup.javapoet.WildcardTypeName;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.lang.reflect.ParameterizedType;
-import java.lang.reflect.Type;
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.Collection;
@@ -113,8 +111,11 @@ public class StaticQualifierMetamodelProcessor extends AbstractProcessor impleme
             "package,private,protected,public,return,short,static,strictfp,super,switch,synchronized,this,throw," +
             "throws,transient,true,try,void,volatile,while"));
     private static final Collection<ElementKind> CLASS_OR_INTERFACE = EnumSet.of(CLASS, INTERFACE);
-    public static final WildcardTypeName WILDCARD = WildcardTypeName.subtypeOf(TypeName.OBJECT);
-    public static final ClassName LANG_STRING = ClassName.get(String.class);
+    private static final WildcardTypeName WILDCARD = WildcardTypeName.subtypeOf(TypeName.OBJECT);
+    private static final ClassName LANG_STRING = ClassName.get(String.class);
+    private static final String PROPERTIES_FIELD = "INSTANCE";
+    private static final String PROPERTIES_HOLDER = "PropertiesLazyHolder";
+    public static final String PROPERTIES = PROPERTIES_HOLDER + "." + PROPERTIES_FIELD;
     private static Set<Element> processed = new HashSet<>();
 
     private @Nullable List<QualifierProcessorServiceProvider> providers;
@@ -177,9 +178,9 @@ public class StaticQualifierMetamodelProcessor extends AbstractProcessor impleme
                         .addModifiers(PUBLIC)
                         .addAnnotation(FunctionalInterface.class)
                         .addSuperinterface(Metadata.class);
-                for (Element enclosedElement : element.getEnclosedElements()) {
-                    if (!(enclosedElement instanceof ExecutableElement)) continue;
-                    ExecutableElement method = (ExecutableElement) enclosedElement;
+                for (Element e : element.getEnclosedElements()) {
+                    if (!(e instanceof ExecutableElement)) continue;
+                    ExecutableElement method = (ExecutableElement) e;
                     String pLCName = method.getSimpleName().toString();
                     String pUUName = LOWER_CAMEL.converterTo(UPPER_UNDERSCORE).convert(pLCName);
                     String pUCName = LOWER_CAMEL.converterTo(UPPER_CAMEL).convert(pLCName);
@@ -187,47 +188,30 @@ public class StaticQualifierMetamodelProcessor extends AbstractProcessor impleme
                     if (pRetType.getKind().isPrimitive()) {
                         pRetType = types().boxedClass((PrimitiveType) pRetType).asType();
                     }
+                    boolean isLink = e.getAnnotation(Link.class) != null && MoreTypes.isTypeOf(Class.class, pRetType);
 
                     String eName = qUUName + "_" + pUUName;
                     String kName = eName + "_KEY";
+
+                    TypeName vTypeName = !isLink ? TypeName.get(pRetType)
+                            : ParameterizedTypeName.get(ClassName.get(Qualifier.class),
+                            TypeName.get(asDeclared(pRetType).getTypeArguments().get(0)));
+                    TypeName eTypeName = ParameterizedTypeName.get(ClassName.get(Extension.class), vTypeName);
+
                     //String MEASURE_UNIT_OF_MEASURE_KEY = "measure.unit";
                     qualifier.addField(FieldSpec.builder(LANG_STRING, kName, PUBLIC, STATIC, FINAL)
                             .initializer("$S", qLCName + "." + pLCName)
                             .build());
                     //Extension<Unit<?>> MEASURE_UNIT_OF_MEASURE = Extension.key(MEASURE_UNIT_OF_MEASURE_KEY);
-                    qualifier.addField(FieldSpec.builder(ParameterizedTypeName.get(
-                            ClassName.get(Extension.class), TypeName.get(pRetType)), eName, PUBLIC, STATIC, FINAL)
+                    qualifier.addField(FieldSpec.builder(eTypeName, eName, PUBLIC, STATIC, FINAL)
                             .initializer("$T.key($L)", Extension.class, kName)
                             .build());
                     //default Unit<?> unit() { return data(MEASURE_UNIT_OF_MEASURE, Unit.ONE); }
                     qualifier.addMethod(methodBuilder("get" + qUCName + pUCName)
                             .addModifiers(DEFAULT, PUBLIC)
-                            .returns(TypeName.get(pRetType))
-                            .addStatement("return data($N)", eName)
+                            .returns(vTypeName)
+                            .addStatement("return data($N" + (isLink ? ".as()" : "") + ")", eName)
                             .build());
-
-                    //Extra extensions for '@Qualify.Link Class<?>' types
-                    boolean isLink = pRetType.getAnnotationMirrors().stream()
-                            .anyMatch(a -> isTypeOf(Qualify.Link.class, a.getAnnotationType()));
-                    if (isLink && MoreTypes.isTypeOf(Class.class, pRetType)) {
-                        String q_eName = eName + "_QUALIFIER";
-                        String q_kName = eName + "_QUALIFIER_KEY";
-                        TypeName q_valTypeName = TypeName.get(asDeclared(pRetType).getTypeArguments().get(0));
-                        TypeName q_qTypeName = ParameterizedTypeName.get(ClassName.get(Qualifier.class), q_valTypeName);
-                        TypeName q_eTypeName = ParameterizedTypeName.get(ClassName.get(Extension.class), q_qTypeName);
-
-                        qualifier.addField(FieldSpec.builder(LANG_STRING, q_kName, PUBLIC, STATIC, FINAL)
-                                .initializer("$S", qLCName + "." + pLCName + ".qualifier")
-                                .build());
-                        qualifier.addField(FieldSpec.builder(q_eTypeName, q_eName, PUBLIC, STATIC, FINAL)
-                                .initializer("$T.key($L)", Extension.class, q_kName)
-                                .build());
-                        qualifier.addMethod(methodBuilder("get" + qUCName + pUCName + "Qualifier")
-                                .addModifiers(DEFAULT, PUBLIC)
-                                .returns(q_qTypeName)
-                                .addStatement("return data($N.as())", q_eName)
-                                .build());
-                    }
                 }
 
                 // static XxQualifier of(Metadata q) { return q instanceof XxQualifier ? (XxQualifier) q : q::data; }
@@ -299,11 +283,13 @@ public class StaticQualifierMetamodelProcessor extends AbstractProcessor impleme
         {
             final TypeName valueType = qualifierType(beanClassName, WILDCARD);
             final TypeName mapType = ParameterizedTypeName.get(ClassName.get(Collection.class), valueType);
-            container.addField(FieldSpec.builder(mapType, "qualifiers", PUBLIC, STATIC, FINAL)
-                    .initializer("$[$T.<$T>asList($L)$]", Arrays.class, valueType, qualifiers.stream()
-                            .filter(Metamodel::isProperty)
-                            .map(p -> format("%1$s", toLower(p.name())))
-                            .collect(joining(",\n", "\n", "")))
+            container.addType(TypeSpec.classBuilder(PROPERTIES_HOLDER).addModifiers(PRIVATE, STATIC, FINAL)
+                    .addField(FieldSpec.builder(mapType, PROPERTIES_FIELD, PRIVATE, STATIC, FINAL)
+                            .initializer("$[$T.<$T>asList($L)$]", Arrays.class, valueType, qualifiers.stream()
+                                    .filter(Metamodel::isProperty)
+                                    .map(p -> format("%1$s", toLower(p.name())))
+                                    .collect(joining(",\n", "\n", "")))
+                            .build())
                     .build());
         }
 
@@ -355,7 +341,7 @@ public class StaticQualifierMetamodelProcessor extends AbstractProcessor impleme
             qualifier.addMethod(methodBuilder("getProperties")
                     .addModifiers(PUBLIC)
                     .returns(propertiesType)
-                    .addStatement("return qualifiers")
+                    .addStatement("return $L", PROPERTIES)
                     .build());
             descriptor.metadata().literal(Qualifier.CORE_PROPERTIES, "getProperties()");
         }

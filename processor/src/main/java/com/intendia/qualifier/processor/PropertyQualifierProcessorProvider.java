@@ -3,9 +3,8 @@ package com.intendia.qualifier.processor;
 
 import static com.intendia.qualifier.PropertyQualifier.PROPERTY_GETTER;
 import static com.intendia.qualifier.PropertyQualifier.PROPERTY_PATH;
-import static com.intendia.qualifier.PropertyQualifier.PROPERTY_READABLE;
 import static com.intendia.qualifier.PropertyQualifier.PROPERTY_SETTER;
-import static com.intendia.qualifier.PropertyQualifier.PROPERTY_WRITABLE;
+import static com.squareup.javapoet.MethodSpec.methodBuilder;
 import static javax.lang.model.element.Modifier.PUBLIC;
 
 import com.intendia.qualifier.PropertyQualifier;
@@ -34,7 +33,7 @@ public class PropertyQualifierProcessorProvider extends QualifierProcessorServic
                 ClassName.get(PropertyQualifier.class), beanType, propertyType));
 
         // Property path
-        writer.addMethod(MethodSpec.methodBuilder("getPath")
+        writer.addMethod(methodBuilder("getPath")
                 .addModifiers(PUBLIC)
                 .returns(LANG_STRING)
                 .addStatement("return getName()")
@@ -44,57 +43,35 @@ public class PropertyQualifierProcessorProvider extends QualifierProcessorServic
         // Property getter
         final ExecutableElement getter = descriptor.getterElement();
         if (getter != null) {
-            // get()
-            final MethodSpec.Builder getMethod = MethodSpec.methodBuilder("get")
-                    .addModifiers(PUBLIC)
-                    .returns(propertyType)
-                    .addParameter(beanType, "object");
+            // getGetter()
+            MethodSpec.Builder getMethod = methodBuilder("getGetter").addModifiers(PUBLIC)
+                    .returns(ParameterizedTypeName.get(ClassName.get(Function.class), beanType, propertyType));
             if (getter.getParameters().isEmpty()) {
-                getMethod.addStatement("return object.$N()", getter.getSimpleName());
+                getMethod.addStatement("return $T::$N", beanType, getter.getSimpleName());
             } else {
                 final TypeName categoryName = ClassName.get(getter.getEnclosingElement().asType());
-                getMethod.addStatement("return $T.$N(object)", categoryName, getter.getSimpleName());
+                getMethod.addStatement("return $T::$N", categoryName, getter.getSimpleName());
 
             }
             writer.addMethod(getMethod.build());
-            descriptor.metadata().literal(PROPERTY_GETTER, "($T<$T,$T>) this::get",
-                    Function.class, beanType, propertyType);
-
-            // isReadable()
-            writer.addMethod(MethodSpec.methodBuilder("isReadable")
-                    .addModifiers(PUBLIC)
-                    .returns(TypeName.BOOLEAN.box())
-                    .addStatement("return true")
-                    .build());
-            descriptor.metadata().literal(PROPERTY_READABLE, "isReadable()");
+            descriptor.metadata().literal(PROPERTY_GETTER, "getGetter()");
         }
 
         // Property setter
         final ExecutableElement setter = descriptor.setterElement();
         if (setter != null) {
-            // set()
-            final MethodSpec.Builder getMethod = MethodSpec.methodBuilder("set")
-                    .addModifiers(PUBLIC)
-                    .addParameter(beanType, "object")
-                    .addParameter(propertyType, "value");
+            // getSetter()
+            MethodSpec.Builder getMethod = methodBuilder("getSetter").addModifiers(PUBLIC)
+                    .returns(ParameterizedTypeName.get(ClassName.get(BiConsumer.class), beanType, propertyType));
             if (setter.getParameters().size() == 1) {
-                getMethod.addStatement("object.$N(value)", setter.getSimpleName());
+                getMethod.addStatement("return $T::$N", beanType, setter.getSimpleName());
             } else {
                 final TypeName categoryName = ClassName.get(setter.getEnclosingElement().asType());
-                getMethod.addStatement("$T.$N(object, value)", categoryName, setter.getSimpleName());
+                getMethod.addStatement("return $T::$N", categoryName, setter.getSimpleName());
 
             }
             writer.addMethod(getMethod.build());
-            descriptor.metadata().literal(PROPERTY_SETTER, "($T<$T,$T>) this::set",
-                    BiConsumer.class, beanType, propertyType);
-
-            // isWritable()
-            writer.addMethod(MethodSpec.methodBuilder("isWritable")
-                    .addModifiers(PUBLIC)
-                    .returns(TypeName.BOOLEAN.box())
-                    .addStatement("return true")
-                    .build());
-            descriptor.metadata().literal(PROPERTY_WRITABLE, "isWritable()");
+            descriptor.metadata().literal(PROPERTY_SETTER, "getSetter()");
         }
     }
 }
