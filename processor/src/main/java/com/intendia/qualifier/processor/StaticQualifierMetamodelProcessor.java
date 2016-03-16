@@ -77,6 +77,7 @@ import javax.annotation.processing.AbstractProcessor;
 import javax.annotation.processing.Processor;
 import javax.annotation.processing.RoundEnvironment;
 import javax.lang.model.SourceVersion;
+import javax.lang.model.element.AnnotationValue;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
@@ -207,10 +208,27 @@ public class StaticQualifierMetamodelProcessor extends AbstractProcessor impleme
                             .initializer("$T.key($L)", Extension.class, kName)
                             .build());
                     //default Unit<?> unit() { return data(MEASURE_UNIT_OF_MEASURE, Unit.ONE); }
+                    Optional<CodeBlock> defaultLiteral = Optional
+                            .ofNullable(method.getDefaultValue())
+                            .map(AnnotationValue::getValue)
+                            .filter(v -> !isLink /*link not supported*/)
+                            .map(v -> {
+                                if (v instanceof TypeMirror) { // class types
+                                    return valueCodeBlock(typeElementFor(Class.class).asType(), v);
+                                } else if (v instanceof VariableElement) { // enums types
+                                    VariableElement ev = MoreElements.asVariable((Element) v);
+                                    return CodeBlock.builder().add("$T.$L", ev.asType(), ev.getSimpleName()).build();
+                                } else { // literal types
+                                    return valueCodeBlock(v);
+                                }
+                            });
                     qualifier.addMethod(methodBuilder("get" + qUCName + pUCName)
                             .addModifiers(DEFAULT, PUBLIC)
                             .returns(vTypeName)
-                            .addStatement("return data($N" + (isLink ? ".as()" : "") + ")", eName)
+                            .addCode("return data($N" + (isLink ? ".as()" : ""), eName)
+                            .addCode(!defaultLiteral.isPresent()
+                                    ? CodeBlock.builder().add(");\n", eName).build()
+                                    : CodeBlock.builder().add(", ").add(defaultLiteral.get()).add(");\n").build())
                             .build());
                 }
 
@@ -658,11 +676,7 @@ public class StaticQualifierMetamodelProcessor extends AbstractProcessor impleme
                     valueType = ((Element) value).asType();
                     valueBlock("$T.$L", valueType, value.toString());
                 } else {
-                    Class<?> valueClass = value.getClass();
-                    if (valueClass.getEnclosingClass() != null && valueClass.getEnclosingClass().isEnum()) {
-                        valueClass = valueClass.getEnclosingClass();
-                    }
-                    valueType = typeElementFor(valueClass).asType();
+                    valueType = valueType(value);
                 }
 
                 if (type == null) type(valueType);
@@ -677,48 +691,10 @@ public class StaticQualifierMetamodelProcessor extends AbstractProcessor impleme
 
             public Optional<CodeBlock> valueBlock() {
                 if (block == null && (type != null && value != null)) {
-                    TypeMirror t = type;
-                    // try unbox so primitive types are handle by kind
-                    try { t = types().unboxedType(type); } catch (Exception ignore) {}
-                    switch (t.getKind()) {
-                        case BOOLEAN:
-                        case BYTE:
-                        case SHORT:
-                        case INT:
-                        case LONG:
-                        case FLOAT:
-                        case DOUBLE:
-                            valueBlock("$L", value);
-                            break;
-                        case CHAR:
-                            valueBlock("'$L'", value);
-                            break;
-                        case DECLARED:
-                            if (types().isSameType(type, typeElementFor(String.class).asType())) {
-                                valueBlock("$S", value);
-                            } else if (isEnum(type)) {
-                                valueBlock("$T.$L", type, value);
-                            } else if (types().isSubtype(type, typeElementFor(Number.class).asType())) {
-                                valueBlock("$L", value);
-                            } else if ("java.lang.Class".equals(types().erasure(type).toString())) {
-                                valueBlock("$T.class", value);
-                            } else {
-                                valueBlock("$T.valueOf($S)", type, value);
-                            }
-                            break;
-                        default:
-                            throw new IllegalArgumentException("illegal property type " + type);
-                    }
+                    valueBlock(valueCodeBlock(type, value));
                 }
 
                 return Optional.ofNullable(block);
-            }
-
-            private boolean isEnum(TypeMirror type) {
-                TypeElement element = MoreElements.asType(types().asElement(type));
-                TypeMirror superclass = element.getSuperclass();
-                return superclass instanceof DeclaredType && "java.lang.Enum"
-                        .equals(types().erasure(superclass).toString());
             }
 
             /** Nullify to not include in static metadata. */
@@ -728,6 +704,66 @@ public class StaticQualifierMetamodelProcessor extends AbstractProcessor impleme
             }
 
             public Metaqualifier done() { return LocalMetadata.this; }
+
         }
+
+    }
+
+    public TypeMirror valueType(Object value) {
+        TypeMirror valueType;
+        Class<?> valueClass = value.getClass();
+        if (valueClass.getEnclosingClass() != null && valueClass.getEnclosingClass().isEnum()) {
+            valueClass = valueClass.getEnclosingClass();
+        }
+        valueType = typeElementFor(valueClass).asType();
+        return valueType;
+    }
+
+    public CodeBlock valueCodeBlock(Object value) {
+        return valueCodeBlock(valueType(value), value);
+    }
+
+    public CodeBlock valueCodeBlock(TypeMirror t, Object value) {
+        // try unbox so primitive types are handle by kind
+        try { t = types().unboxedType(t); } catch (Exception ignore) {}
+
+        CodeBlock.Builder block = CodeBlock.builder();
+        switch (t.getKind()) {
+            case BOOLEAN:
+            case BYTE:
+            case SHORT:
+            case INT:
+            case LONG:
+            case FLOAT:
+            case DOUBLE:
+                block.add("$L", value);
+                break;
+            case CHAR:
+                block.add("'$L'", value);
+                break;
+            case DECLARED:
+                if (types().isSameType(t, typeElementFor(String.class).asType())) {
+                    block.add("$S", value);
+                } else if (isEnum(t)) {
+                    block.add("$T.$L", t, value);
+                } else if (types().isSubtype(t, typeElementFor(Number.class).asType())) {
+                    block.add("$L", value);
+                } else if ("java.lang.Class".equals(types().erasure(t).toString())) {
+                    block.add("$T.class", value);
+                } else {
+                    block.add("$T.valueOf($S)", t, value);
+                }
+                break;
+            default:
+                throw new IllegalArgumentException("illegal property type " + t);
+        }
+        return block.build();
+    }
+
+    private boolean isEnum(TypeMirror type) {
+        TypeElement element = MoreElements.asType(types().asElement(type));
+        TypeMirror superclass = element.getSuperclass();
+        return superclass instanceof DeclaredType && "java.lang.Enum"
+                .equals(types().erasure(superclass).toString());
     }
 }

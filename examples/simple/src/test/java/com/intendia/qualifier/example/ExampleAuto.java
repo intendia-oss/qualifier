@@ -9,14 +9,14 @@ import java.util.concurrent.TimeUnit;
 
 @Qualify.Auto @Retention(SOURCE)
 public @interface ExampleAuto {
-    String string();
+    String string() default "def";
 
-    int integer();
+    int integer() default -1;
 
-    Class<?> type();
+    Class<?> type() default Void.class;
 
     @Qualify.Link
     Class<?> link();
 
-    TimeUnit enumeration();
+    TimeUnit enumeration() default TimeUnit.MILLISECONDS;
 }
