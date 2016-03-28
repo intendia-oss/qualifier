@@ -3,7 +3,7 @@
     <groupId>com.intendia.qualifier</groupId>
     <artifactId>qualifier-parent</artifactId>
     <version>0.10-SNAPSHOT</version>
-    <name>Qualifier (Parent)</name>
+    <name>Qualifier</name>
     <packaging>pom</packaging>
 
     <properties>
