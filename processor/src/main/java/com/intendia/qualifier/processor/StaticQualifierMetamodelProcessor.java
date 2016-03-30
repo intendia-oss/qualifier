@@ -421,6 +421,7 @@ public class StaticQualifierMetamodelProcessor extends AbstractProcessor impleme
             builder.add(new QualifyQualifierProcessorProvider());
             builder.add(new PropertyQualifierProcessorProvider());
             builder.add(new AutoQualifierProcessorProvider());
+            builder.add(new ComparableQualifierProcessorProvider());
 
             final Iterator<QualifierProcessorServiceProvider> iterator = loader.iterator();
             for (; ; ) {
