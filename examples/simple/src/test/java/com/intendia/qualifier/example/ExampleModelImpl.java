@@ -8,8 +8,10 @@ import java.util.List;
 public class ExampleModelImpl implements ExampleModel {
     String stringValue;
     List<String> stringListValue;
-    Double doubleValue;
     Color color;
+    private int[] intArray;
+    private Integer[] integerArray;
+    Double doubleValue;
 
     @Override public String getStringValue() {
         return stringValue;
@@ -25,6 +27,14 @@ public class ExampleModelImpl implements ExampleModel {
 
     @Override public Color getColorValue() {
         return color;
+    }
+
+    @Override public int[] getIntArray() {
+        return intArray;
+    }
+
+    @Override public Integer[] getIntegerArray() {
+        return integerArray;
     }
 
     public Double getDoubleValue() {

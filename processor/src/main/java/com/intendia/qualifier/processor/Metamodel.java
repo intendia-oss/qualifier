@@ -4,6 +4,7 @@ import javax.annotation.Nullable;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.type.DeclaredType;
+import javax.lang.model.type.TypeMirror;
 
 public interface Metamodel {
     String SELF = "self";
@@ -14,9 +15,9 @@ public interface Metamodel {
 
     TypeElement beanElement();
 
-    DeclaredType propertyType();
+    TypeMirror propertyType();
 
-    TypeElement propertyElement();
+    @Nullable TypeElement propertyElement();
 
     @Nullable ExecutableElement getterElement();
 

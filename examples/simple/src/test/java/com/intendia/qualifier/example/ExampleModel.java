@@ -6,6 +6,7 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 import com.google.common.base.Predicate;
 import com.intendia.qualifier.annotation.Qualify;
 import com.intendia.qualifier.annotation.QualifyExtension;
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -27,6 +28,14 @@ public interface ExampleModel {
     List<String> getStringListValue();
 
     Color getColorValue();
+
+    int[] getIntArray();
+
+    Integer[] getIntegerArray();
+
+    default List<Integer> getIntegerList() {
+        return Arrays.asList(getIntegerArray());
+    }
 
     @Qualify class ExampleInner {}
 

@@ -322,9 +322,10 @@ public class StaticQualifierMetamodelProcessor extends AbstractProcessor impleme
         // Property ex. ref: person.address, name: address, type: Address
         String propertyName = toLower(descriptor.name());
         TypeName propertyType = TypeName.get(descriptor.propertyType());
-        ClassName propertyQualifier =
-                descriptor.propertyType().asElement().getAnnotation(Qualify.class) == null ? null :
-                        ClassName.bestGuess(getQualifierName(getFlatName(descriptor.propertyElement())));
+        @Nullable ClassName propertyQualifier = Optional.ofNullable(descriptor.propertyElement())
+                .filter(o -> o.getAnnotation(Qualify.class) != null)
+                .map(o -> ClassName.bestGuess(getQualifierName(getFlatName(descriptor.propertyElement()))))
+                .orElse(null);
 
         // the qualifier representing the property, ex. PersonAddress
         ClassName qualifierType = ClassName.get(beanType.packageName(), beanType.simpleName() + toUpper(propertyName));
@@ -500,8 +501,8 @@ public class StaticQualifierMetamodelProcessor extends AbstractProcessor impleme
         @Override public TypeElement beanElement() { return beanElement; }
 
         /** The property type. Primitive types are returned as boxed. */
-        @Override public DeclaredType propertyType() {
-            if (name.equals(SELF)) return (DeclaredType) beanElement().asType();
+        @Override public TypeMirror propertyType() {
+            if (name.equals(SELF)) return beanElement().asType();
             // Non SELF properties must have getter or setter, and if both exist the type must match
             assert getter != null || setter != null;
             // TODO next assert fails on static (category) setters
@@ -511,10 +512,13 @@ public class StaticQualifierMetamodelProcessor extends AbstractProcessor impleme
             if (typeMirror.getKind().isPrimitive()) {
                 typeMirror = types().boxedClass((PrimitiveType) typeMirror).asType();
             }
-            return (DeclaredType) typeMirror;
+            return typeMirror;
         }
 
-        @Override public TypeElement propertyElement() { return asTypeElement(propertyType().asElement().asType()); }
+        @Override public TypeElement propertyElement() {
+            TypeMirror typeMirror = propertyType();
+            return typeMirror instanceof DeclaredType ? asTypeElement(typeMirror) : null;
+        }
 
         @Override public @Nullable ExecutableElement getterElement() { return getter; }
 

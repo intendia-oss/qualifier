@@ -20,12 +20,14 @@ import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeSpec;
 import com.squareup.javapoet.WildcardTypeName;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.Modifier;
 import javax.lang.model.element.TypeElement;
+import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.ElementFilter;
@@ -62,8 +64,8 @@ public class QualifyQualifierProcessorProvider extends QualifierProcessorService
                         && isFirstParameterStringType(method));
         if (!valid) {
             getProcessingEnv().getMessager().printMessage(Diagnostic.Kind.ERROR, String.format(
-                            "Qualifier extension type '%s' with key '%s' must have a 'valueOf(String)' static " +
-                                    "method", metaextension.type(), metaextension.extension()),
+                    "Qualifier extension type '%s' with key '%s' must have a 'valueOf(String)' static " +
+                            "method", metaextension.type(), metaextension.extension()),
                     annotatedElement, annotationMirror);
         }
 
@@ -86,23 +88,26 @@ public class QualifyQualifierProcessorProvider extends QualifierProcessorService
                 .build());
         descriptor.metadata().put(CORE_NAME).valueBlock("getName()");
 
+        TypeMirror propertyType = descriptor.propertyType();
+        final List<? extends TypeMirror> propertyTypeArguments = propertyType instanceof DeclaredType
+                ? ((DeclaredType) propertyType).getTypeArguments() : Collections.emptyList();
+
         // Property type
         writer.addMethod(MethodSpec.methodBuilder("getType")
                 .addModifiers(PUBLIC)
                 .returns(ParameterizedTypeName.get(LANG_CLASS, TypeName.get(descriptor.propertyType())))
                 .addStatement("return $L$T.class",
-                        descriptor.propertyType().getTypeArguments().isEmpty() ? "" : "(Class) ",
+                        propertyTypeArguments.isEmpty() ? "" : "(Class) ",
                         TypeName.get(types().erasure(descriptor.propertyType())))
                 .build());
         descriptor.metadata().put(CORE_TYPE).valueBlock("getType()");
 
         // Property generics
-        final List<? extends TypeMirror> typeArguments = descriptor.propertyType().getTypeArguments();
-        if (!typeArguments.isEmpty()) {
+        if (!propertyTypeArguments.isEmpty()) {
             writer.addMethod(MethodSpec.methodBuilder("getGenerics")
                     .addModifiers(PUBLIC)
                     .returns(ArrayTypeName.of(ParameterizedTypeName.get(LANG_CLASS, WILDCARD)))
-                    .addStatement("return new Class<?>[]{$L}", typeArguments.stream()
+                    .addStatement("return new Class<?>[]{$L}", propertyTypeArguments.stream()
                             .map(t -> t.getKind() == TypeKind.WILDCARD ? "null" : t + ".class")
                             .collect(joining(",")))
                     .build());
