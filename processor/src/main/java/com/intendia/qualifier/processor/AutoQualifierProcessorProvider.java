@@ -6,8 +6,8 @@ import static com.google.auto.common.MoreTypes.asDeclared;
 import static com.google.auto.common.MoreTypes.isTypeOf;
 import static com.google.common.base.CaseFormat.LOWER_CAMEL;
 import static com.google.common.base.CaseFormat.UPPER_CAMEL;
-import static com.intendia.qualifier.processor.TypeHelper.getFlatName;
-import static com.intendia.qualifier.processor.TypeHelper.getQualifierName;
+import static com.intendia.qualifier.processor.StaticQualifierMetamodelProcessor.getFlatName;
+import static com.intendia.qualifier.processor.StaticQualifierMetamodelProcessor.getQualifierName;
 import static javax.lang.model.element.Modifier.PUBLIC;
 
 import com.intendia.qualifier.Extension;

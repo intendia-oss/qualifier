@@ -1,7 +1,6 @@
 // Copyright 2014 Intendia, SL.
 package com.intendia.qualifier.processor;
 
-import static com.google.common.collect.FluentIterable.from;
 import static com.intendia.qualifier.Qualifier.CORE_GENERICS;
 import static com.intendia.qualifier.Qualifier.CORE_NAME;
 import static com.intendia.qualifier.Qualifier.CORE_TYPE;
@@ -57,7 +56,7 @@ public class QualifyQualifierProcessorProvider extends QualifierProcessorService
         if (type.toString().equals("java.lang.Class")) return;
 
         // Check extensions types has a valid valueOf(String) static method
-        final boolean valid = from(getExecutableElements(element)).anyMatch(method ->
+        final boolean valid = getExecutableElements(element).stream().anyMatch(method ->
                 method.getSimpleName().toString().equals("valueOf")
                         && method.getModifiers().contains(Modifier.STATIC)
                         && method.getParameters().size() == 1
