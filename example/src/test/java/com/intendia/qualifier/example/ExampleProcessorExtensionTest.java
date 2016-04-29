@@ -5,8 +5,11 @@ import static com.intendia.qualifier.example.ExampleModelExampleInner__.ExampleI
 import static com.intendia.qualifier.example.ExampleModel__.ExampleModelMetadata;
 import static com.intendia.qualifier.example.ExampleModel__.stringListValue;
 import static java.util.Objects.requireNonNull;
+import static java.util.concurrent.TimeUnit.DAYS;
+import static java.util.concurrent.TimeUnit.HOURS;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 
@@ -69,6 +72,8 @@ public class ExampleProcessorExtensionTest {
         assertEquals("def", q.getExampleAutoString());
         assertEquals(null, q.data("exampleAuto.type"));
         assertEquals(Void.class, q.getExampleAutoType());
+        assertArrayEquals(new TimeUnit[0], q.getExampleAutoEnumerationList());
+        assertArrayEquals(new TimeUnit[] { DAYS, HOURS }, q.getExampleAutoEnumerationListWithDefaults());
     }
 
     @Test public void test_works() throws Exception {

@@ -73,6 +73,7 @@ import java.util.function.Function;
 import javax.annotation.Generated;
 import javax.annotation.Nullable;
 import javax.annotation.processing.AbstractProcessor;
+import javax.annotation.processing.ProcessingEnvironment;
 import javax.annotation.processing.Processor;
 import javax.annotation.processing.RoundEnvironment;
 import javax.lang.model.SourceVersion;
@@ -89,6 +90,7 @@ import javax.lang.model.type.MirroredTypeException;
 import javax.lang.model.type.PrimitiveType;
 import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.Elements;
+import javax.lang.model.util.SimpleAnnotationValueVisitor7;
 import javax.lang.model.util.Types;
 import javax.tools.Diagnostic.Kind;
 
@@ -178,11 +180,11 @@ public class StaticQualifierMetamodelProcessor extends AbstractProcessor impleme
                         .addSuperinterface(Metadata.class);
                 for (Element e : element.getEnclosedElements()) {
                     if (!(e instanceof ExecutableElement)) continue;
-                    ExecutableElement method = (ExecutableElement) e;
-                    String pLCName = method.getSimpleName().toString();
+                    ExecutableElement aElement = (ExecutableElement) e;
+                    String pLCName = aElement.getSimpleName().toString();
                     String pUUName = LOWER_CAMEL.converterTo(UPPER_UNDERSCORE).convert(pLCName);
                     String pUCName = LOWER_CAMEL.converterTo(UPPER_CAMEL).convert(pLCName);
-                    TypeMirror pRetType = method.getReturnType();
+                    TypeMirror pRetType = aElement.getReturnType();
                     if (pRetType.getKind().isPrimitive()) {
                         pRetType = types().boxedClass((PrimitiveType) pRetType).asType();
                     }
@@ -206,19 +208,9 @@ public class StaticQualifierMetamodelProcessor extends AbstractProcessor impleme
                             .build());
                     //default Unit<?> unit() { return data(MEASURE_UNIT_OF_MEASURE, Unit.ONE); }
                     Optional<CodeBlock> defaultLiteral = Optional
-                            .ofNullable(method.getDefaultValue())
-                            .map(AnnotationValue::getValue)
+                            .ofNullable(aElement.getDefaultValue())
                             .filter(v -> !isLink /*link not supported*/)
-                            .map(v -> {
-                                if (v instanceof TypeMirror) { // class types
-                                    return valueCodeBlock(typeElementFor(Class.class).asType(), v);
-                                } else if (v instanceof VariableElement) { // enums types
-                                    VariableElement ev = MoreElements.asVariable((Element) v);
-                                    return CodeBlock.builder().add("$T.$L", ev.asType(), ev.getSimpleName()).build();
-                                } else { // literal types
-                                    return valueCodeBlock(v);
-                                }
-                            });
+                            .map(a -> annotationFieldAsCodeBlock(processingEnv, aElement, aElement.getDefaultValue()));
                     qualifier.addMethod(methodBuilder("get" + qUCName + pUCName)
                             .addModifiers(DEFAULT, PUBLIC)
                             .returns(vTypeName)
@@ -252,6 +244,36 @@ public class StaticQualifierMetamodelProcessor extends AbstractProcessor impleme
         }
 
         return true;
+    }
+
+    static CodeBlock annotationFieldAsCodeBlock(ProcessingEnvironment env,
+            ExecutableElement annotationMethod, AnnotationValue annotationValue) {
+        CodeBlock.Builder builder = CodeBlock.builder();
+        annotationValue.accept(new SimpleAnnotationValueVisitor7<Void, Void>() {
+            @Override protected Void defaultAction(Object o, Void ignore) {
+                builder.add(valueCodeBlock(env, valueType(env, o), o)); return null;
+            }
+
+            @Override public Void visitEnumConstant(VariableElement c, Void ignore) {
+                builder.add("$T.$L", c.asType(), c.getSimpleName()); return null;
+            }
+
+            @Override public Void visitType(TypeMirror t, Void ignore) {
+                builder.add("$T.class", t); return null;
+            }
+
+            @Override public Void visitArray(List<? extends AnnotationValue> vs, Void ignore) {
+                int cnt = vs.size();
+                builder.add("new $T{", annotationMethod.getReturnType());
+                for (AnnotationValue value : vs) {
+                    value.accept(this, null);
+                    if (--cnt > 0) builder.add(", ");
+                }
+                builder.add("}").build();
+                return null;
+            }
+        }, null);
+        return builder.build();
     }
 
     public void process(TypeElement beanElement) throws Exception {
@@ -586,9 +608,7 @@ public class StaticQualifierMetamodelProcessor extends AbstractProcessor impleme
     private Elements elements() { return processingEnv.getElementUtils(); }
 
     private TypeElement typeElementFor(Class<?> clazz) {
-        requireNonNull(clazz.getCanonicalName(), () -> clazz + " has no canonical name (local or anonymous class)");
-        return requireNonNull(elements().getTypeElement(clazz.getCanonicalName()),
-                "element for type " + clazz + " not found");
+        return typeElementFor(processingEnv, clazz);
     }
 
     private TypeName qualifierType(TypeName bean, TypeName property) {
@@ -726,7 +746,7 @@ public class StaticQualifierMetamodelProcessor extends AbstractProcessor impleme
 
             public Optional<CodeBlock> valueBlock() {
                 if (block == null && (type != null && value != null)) {
-                    valueBlock(valueCodeBlock(type, value));
+                    valueBlock(valueCodeBlock(processingEnv, type, value));
                 }
 
                 return Optional.ofNullable(block);
@@ -745,22 +765,26 @@ public class StaticQualifierMetamodelProcessor extends AbstractProcessor impleme
     }
 
     public TypeMirror valueType(Object value) {
+        return valueType(processingEnv, value);
+    }
+
+    private static TypeMirror valueType(ProcessingEnvironment env, Object value) {
         TypeMirror valueType;
         Class<?> valueClass = value.getClass();
         if (valueClass.getEnclosingClass() != null && valueClass.getEnclosingClass().isEnum()) {
             valueClass = valueClass.getEnclosingClass();
         }
-        valueType = typeElementFor(valueClass).asType();
+        valueType = typeElementFor(env, valueClass).asType();
         return valueType;
     }
 
     public CodeBlock valueCodeBlock(Object value) {
-        return valueCodeBlock(valueType(value), value);
+        return valueCodeBlock(this.processingEnv, valueType(value), value);
     }
 
-    public CodeBlock valueCodeBlock(TypeMirror t, Object value) {
+    public static CodeBlock valueCodeBlock(ProcessingEnvironment env, TypeMirror t, Object value) {
         // try unbox so primitive types are handle by kind
-        try { t = types().unboxedType(t); } catch (Exception ignore) {}
+        try { t = env.getTypeUtils().unboxedType(t); } catch (Exception ignore) {}
 
         CodeBlock.Builder block = CodeBlock.builder();
         switch (t.getKind()) {
@@ -777,13 +801,13 @@ public class StaticQualifierMetamodelProcessor extends AbstractProcessor impleme
                 block.add("'$L'", value);
                 break;
             case DECLARED:
-                if (types().isSameType(t, typeElementFor(String.class).asType())) {
+                if (MoreTypes.isTypeOf(String.class, t)) {
                     block.add("$S", value);
                 } else if (isEnum(t)) {
                     block.add("$T.$L", t, value);
-                } else if (types().isSubtype(t, typeElementFor(Number.class).asType())) {
+                } else if (env.getTypeUtils().isSubtype(t, typeElementFor(env, Number.class).asType())) {
                     block.add("$L", value);
-                } else if ("java.lang.Class".equals(types().erasure(t).toString())) {
+                } else if (MoreTypes.isTypeOf(Class.class, t)) {
                     block.add("$T.class", value);
                 } else {
                     block.add("$T.valueOf($S)", t, value);
@@ -795,11 +819,8 @@ public class StaticQualifierMetamodelProcessor extends AbstractProcessor impleme
         return block.build();
     }
 
-    private boolean isEnum(TypeMirror type) {
-        TypeElement element = MoreElements.asType(types().asElement(type));
-        TypeMirror superclass = element.getSuperclass();
-        return superclass instanceof DeclaredType && "java.lang.Enum"
-                .equals(types().erasure(superclass).toString());
+    private static boolean isEnum(TypeMirror type) {
+        return MoreTypes.isTypeOf(Enum.class, MoreElements.asType(MoreTypes.asElement(type)).getSuperclass());
     }
 
     public static String getFlatName(TypeElement classRepresenter) {
@@ -812,5 +833,11 @@ public class StaticQualifierMetamodelProcessor extends AbstractProcessor impleme
 
     public static String getQualifierName(String flatName) {
         return flatName + "__";
+    }
+
+    static TypeElement typeElementFor(ProcessingEnvironment env, Class<?> clazz) {
+        requireNonNull(clazz.getCanonicalName(), () -> clazz + " has no canonical name (local or anonymous class)");
+        return requireNonNull(env.getElementUtils().getTypeElement(clazz.getCanonicalName()),
+                "element for type " + clazz + " not found");
     }
 }

@@ -19,4 +19,8 @@ public @interface ExampleAuto {
     Class<?> link();
 
     TimeUnit enumeration() default TimeUnit.MILLISECONDS;
+
+    TimeUnit[] enumerationList() default {};
+
+    TimeUnit[] enumerationListWithDefaults() default { TimeUnit.DAYS, TimeUnit.HOURS };
 }

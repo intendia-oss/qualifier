@@ -6,6 +6,7 @@ import static com.google.auto.common.MoreTypes.asDeclared;
 import static com.google.auto.common.MoreTypes.isTypeOf;
 import static com.google.common.base.CaseFormat.LOWER_CAMEL;
 import static com.google.common.base.CaseFormat.UPPER_CAMEL;
+import static com.intendia.qualifier.processor.StaticQualifierMetamodelProcessor.annotationFieldAsCodeBlock;
 import static com.intendia.qualifier.processor.StaticQualifierMetamodelProcessor.getFlatName;
 import static com.intendia.qualifier.processor.StaticQualifierMetamodelProcessor.getQualifierName;
 import static javax.lang.model.element.Modifier.PUBLIC;
@@ -65,19 +66,18 @@ public class AutoQualifierProcessorProvider extends QualifierProcessorServicePro
                     Object value = values.get(e).getValue();
 
                     String methodName = "get" + aUCName + pUCName;
-                    Metaextension<Object> extension;
                     CodeBlock valueBlock;
                     TypeName returnType;
 
                     if (!isLink) {
-                        extension = metaqualifier.use(key, value);
-                        valueBlock = extension.valueBlock().get();
-                        extension.valueBlock("$L()", methodName);
+                        metaqualifier.literal(key, "$L()", methodName);
+                        valueBlock = annotationFieldAsCodeBlock(getProcessingEnv(), e, values.get(e));
                         returnType = TypeName.get(pRetType);
                     } else {
                         String valType = getFlatName((TypeElement) types().asElement((DeclaredType) value));
-                        valueBlock = CodeBlock.builder().add("$T.self", ClassName.bestGuess(getQualifierName(valType))).build();
-                        extension = metaqualifier.literal(key, "$L()", methodName);
+                        valueBlock = CodeBlock.builder().add("$T.self", ClassName.bestGuess(getQualifierName(valType)))
+                                .build();
+                        metaqualifier.literal(key, "$L()", methodName);
                         returnType = ParameterizedTypeName.get(ClassName.get(Qualifier.class),
                                 TypeName.get(asDeclared(pRetType).getTypeArguments().get(0)));
                     }

@@ -1,6 +1,8 @@
 // Copyright 2015 Intendia, SL.
 package com.intendia.qualifier.example;
 
+import static java.util.concurrent.TimeUnit.DAYS;
+import static java.util.concurrent.TimeUnit.HOURS;
 import static java.util.concurrent.TimeUnit.SECONDS;
 
 import com.google.common.base.Predicate;
@@ -19,7 +21,7 @@ import java.util.concurrent.TimeUnit;
         @QualifyExtension(key = "extension.class", type = Class.class, value = "java.lang.String"),
 })
 public interface ExampleModel {
-    @ExampleAuto(string = "s", type = ExampleInnerInterface.class, link = Color.class, integer = 1, enumeration = SECONDS)
+    @ExampleAuto(string = "s", type = ExampleInnerInterface.class, link = Color.class, integer = 1, enumeration = SECONDS, enumerationList = {DAYS, HOURS})
     @ExampleManual(string = "s", type = ExampleInnerInterface.class, integer = 1, enumeration = SECONDS) //
     String getStringValue();
 
