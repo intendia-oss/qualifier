@@ -309,7 +309,7 @@ public class StaticQualifierMetamodelProcessor extends AbstractProcessor impleme
 
         // Emit qualifiers for each bean property
         for (Metamodel qualifier : qualifiers) {
-            emitQualifier(beanElement, container, qualifier);
+            emitQualifier(beanElement, container, qualifier, metamodelName);
         }
 
         // All qualifiers instance
@@ -330,7 +330,8 @@ public class StaticQualifierMetamodelProcessor extends AbstractProcessor impleme
                 .writeTo(processingEnv.getFiler());
     }
 
-    private void emitQualifier(TypeElement beanElement, TypeSpec.Builder writer, Metamodel descriptor) {
+    private void emitQualifier(TypeElement beanElement, TypeSpec.Builder writer, Metamodel descriptor,
+            ClassName metamodelName) {
 
         // Bean ex. ref: person, name: self, type: Person
         ClassName beanType = ClassName.get(descriptor.beanElement());
@@ -344,7 +345,7 @@ public class StaticQualifierMetamodelProcessor extends AbstractProcessor impleme
                 .orElse(null);
 
         // the qualifier representing the property, ex. PersonAddress
-        ClassName qualifierType = ClassName.get(beanType.packageName(), beanType.simpleName() + toUpper(propertyName));
+        ClassName qualifierType = metamodelName.nestedClass(beanType.simpleName() + toUpper(propertyName));
 
         // Property field and class
 

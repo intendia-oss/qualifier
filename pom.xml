@@ -84,7 +84,7 @@
         <dependencies><!-- @formatter:off -->
             <dependency><groupId>com.intendia.qualifier</groupId><artifactId>qualifier</artifactId><version>${project.version}</version></dependency>
             <dependency><groupId>com.intendia.qualifier</groupId><artifactId>qualifier-processor</artifactId><version>${project.version}</version></dependency>
-            <dependency><groupId>com.squareup</groupId><artifactId>javapoet</artifactId><version>1.2.0</version></dependency>
+            <dependency><groupId>com.squareup</groupId><artifactId>javapoet</artifactId><version>1.7.0</version></dependency>
             <dependency><groupId>com.google.guava</groupId><artifactId>guava</artifactId><version>18.0</version></dependency>
             <dependency><groupId>com.google.code.findbugs</groupId><artifactId>jsr305</artifactId><version>3.0.0</version></dependency>
             <dependency><groupId>com.google.auto</groupId><artifactId>auto-common</artifactId><version>0.4</version></dependency>
