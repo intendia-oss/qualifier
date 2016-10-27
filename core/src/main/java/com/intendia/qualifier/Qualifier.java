@@ -39,8 +39,12 @@ public interface Qualifier<V> extends Metadata {
         return null;
     }
 
-    //XXX experimental: utility to override one extension value
-    default <E> Qualifier<V> override(Extension<E> extension, E value) {
-        return str -> extension.getKey().equals(str) ? value : data(extension);
+    default Qualifier<V> overrideQualifier() {
+        return Metadata.override(this, Qualifier::unchecked);
+    }
+
+    @SuppressWarnings("unchecked")
+    static <V> Qualifier<V> unchecked(Metadata q) {
+        return q instanceof Qualifier ? (Qualifier<V>) q : q::data;
     }
 }

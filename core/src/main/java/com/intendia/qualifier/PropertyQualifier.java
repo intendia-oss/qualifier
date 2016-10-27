@@ -51,7 +51,7 @@ public interface PropertyQualifier<T, V> extends Qualifier<V> {
 
     default Comparator<T> getPropertyComparator() {
         //noinspection Convert2Lambda IGP-1732 GWT optimize incompatible
-        return data(PROPERTY_COMPARATOR.<Comparator<T>>as(), new Supplier<Comparator<T>>() {
+        return data(PROPERTY_COMPARATOR.as(), new Supplier<Comparator<T>>() {
             @Override public Comparator<T> get() {
                 return ComparableQualifier.of(PropertyQualifier.this)
                         .orderingOnResultOf(PropertyQualifier.this.getGetter());
@@ -69,17 +69,21 @@ public interface PropertyQualifier<T, V> extends Qualifier<V> {
         return property == null ? null : compose(property);
     }
 
-    // XXX GWT get confused if this.override2() overrides super.override()
-    default <E> PropertyQualifier<T, V> override2(Extension<E> extension, E value) {
-        return str -> extension.getKey().equals(str) ? value : data(extension);
+    default PropertyQualifier<T, V> overrideProperty() {
+        return Metadata.override(this, PropertyQualifier::unchecked);
     }
 
-    static <V> PropertyQualifier<V, V> asProperty(Qualifier<V> q) {
-        return new IdentityPropertyQualifier<>(q);
+    @SuppressWarnings("unchecked")
+    static <T, V> PropertyQualifier<T, V> unchecked(Metadata q) {
+        return q instanceof PropertyQualifier ? (PropertyQualifier<T, V>) q : q::data;
     }
 
     static <V> PropertyQualifier<?, V> of(Qualifier<V> q) {
         return q instanceof PropertyQualifier ? (PropertyQualifier<?, V>) q : q::data;
+    }
+
+    static <V> PropertyQualifier<V, V> asProperty(Qualifier<V> q) {
+        return new IdentityPropertyQualifier<>(q);
     }
 }
 

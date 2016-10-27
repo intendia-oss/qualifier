@@ -23,6 +23,15 @@ public interface ComparableQualifier<T> extends Qualifier<T> {
         return ByFunctionComparator.onResultOf(function, getTypeComparator());
     }
 
+    default ComparableQualifier<T> overrideComparable() {
+        return Metadata.override(this, ComparableQualifier::unchecked);
+    }
+
+    @SuppressWarnings("unchecked")
+    static <T> ComparableQualifier<T> unchecked(Metadata q) {
+        return q instanceof ComparableQualifier ? (ComparableQualifier<T>) q : q::data;
+    }
+
     static <T> ComparableQualifier<T> of(Qualifier<T> q) {
         return q instanceof ComparableQualifier ? (ComparableQualifier<T>) q : q::data;
     }

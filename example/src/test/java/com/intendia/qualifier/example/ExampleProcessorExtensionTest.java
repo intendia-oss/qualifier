@@ -15,6 +15,7 @@ import static org.junit.Assert.assertNotNull;
 
 import com.intendia.qualifier.ComparableQualifier;
 import com.intendia.qualifier.Extension;
+import com.intendia.qualifier.Metadata;
 import com.intendia.qualifier.PropertyQualifier;
 import com.intendia.qualifier.Qualifier;
 import com.intendia.qualifier.example.ExampleModel.ExampleInnerInterface;
@@ -84,7 +85,8 @@ public class ExampleProcessorExtensionTest {
 
     @Test public void assert_comparator_can_be_override() {
         Comparator<ExampleModel> stringComparator = ExampleModel__.stringValue.getPropertyComparator();
-        Qualifier<ExampleModel> override = ExampleModelMetadata.override(COMPARABLE_COMPARATOR, stringComparator);
+        Qualifier<ExampleModel> override = ExampleModelMetadata.overrideQualifier();
+        override.mutate().put(COMPARABLE_COMPARATOR, stringComparator);
         // this is easy, just confirm comparable returns the override qualifier
         assertEquals(stringComparator, ComparableQualifier.of(override).getTypeComparator());
         // this is the important, confirm that identity decorator maintains the override comparator
@@ -92,9 +94,7 @@ public class ExampleProcessorExtensionTest {
     }
 
     @Test public void assert_paths() {
-        Qualifier<ExampleModel> q = ExampleModelMetadata;
-
-        PropertyQualifier<ExampleModel, ExampleModel> qSelf = PropertyQualifier.asProperty(q);
+        PropertyQualifier<ExampleModel, ExampleModel> qSelf = PropertyQualifier.asProperty(ExampleModelMetadata);
         assertEquals("", qSelf.getPath());
         assertEquals("self", qSelf.getName());
         assertEquals("override", qSelf.getPath("override"));
@@ -114,5 +114,28 @@ public class ExampleProcessorExtensionTest {
         Qualifier<ExampleModel> q = ExampleModelMetadata;
         assertEquals("colorValue", requireNonNull(q.getProperty("colorValue")).getPath());
         assertEquals("colorValue.name", requireNonNull(q.getProperty("colorValue.name")).getPath());
+    }
+
+    @Test public void mutators_api_looks_good() {
+        PropertyQualifier<ExampleModel, String> q = ExampleModel__.stringValue;
+        assertEquals(Integer.valueOf(1), q.data(ExampleAutoQualifier.EXAMPLE_AUTO_INTEGER));
+
+        assertEquals(Integer.valueOf(2), Metadata
+                .override(ExampleModel__.stringValue, PropertyQualifier::unchecked)
+                .mutate()
+                .put(ExampleAutoQualifier.EXAMPLE_AUTO_INTEGER, 2)
+                .data(ExampleAutoQualifier.EXAMPLE_AUTO_INTEGER));
+
+        PropertyQualifier<ExampleModel, String> mutable = ExampleModel__.stringValue.overrideProperty();
+        PropertyQualifier<ExampleModel, String> nested = mutable.overrideProperty();
+
+        mutable.mutate().put(ExampleAutoQualifier.EXAMPLE_AUTO_INTEGER, 3);
+        assertEquals(Integer.valueOf(3), mutable.data(ExampleAutoQualifier.EXAMPLE_AUTO_INTEGER));
+
+        nested.mutate().put(ExampleAutoQualifier.EXAMPLE_AUTO_INTEGER, 4);
+        assertEquals(Integer.valueOf(4), nested.data(ExampleAutoQualifier.EXAMPLE_AUTO_INTEGER));
+
+        nested.mutate().remove(ExampleAutoQualifier.EXAMPLE_AUTO_INTEGER);
+        assertEquals(Integer.valueOf(3), nested.data(ExampleAutoQualifier.EXAMPLE_AUTO_INTEGER));
     }
 }
