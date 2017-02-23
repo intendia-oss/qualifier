@@ -23,6 +23,7 @@ import java.util.concurrent.TimeUnit;
 public interface ExampleModel {
     @ExampleAuto(string = "s", type = ExampleInnerInterface.class, link = Color.class, integer = 1, enumeration = SECONDS, enumerationList = {DAYS, HOURS})
     @ExampleManual(string = "s", type = ExampleInnerInterface.class, integer = 1, enumeration = SECONDS) //
+    @Qualify.Extend(ExampleMixin.class) //
     String getStringValue();
 
     void setStringValue(String stringValue);
@@ -46,6 +47,7 @@ public interface ExampleModel {
     @Qualify interface ExampleDependant extends Predicate<ExampleInnerInterface> {}
 
     class Category {
+        @Qualify.Extend(value = ExampleMixin.class, name = "stringValue") //
         public static String getCategoryString(ExampleModel o) {
             return o.getStringValue();
         }

@@ -138,4 +138,10 @@ public class ExampleProcessorExtensionTest {
         nested.mutate().remove(ExampleAutoQualifier.EXAMPLE_AUTO_INTEGER);
         assertEquals(Integer.valueOf(3), nested.data(ExampleAutoQualifier.EXAMPLE_AUTO_INTEGER));
     }
+
+    @Test public void mixins_usage() {
+        // expected values defined in ExampleMixin instead of ExampleModel
+        assertEquals("mixin", ExampleModel__.stringValue.data("mixin.val"));
+        assertEquals("mixin", ExampleModel__.categoryString.data("mixin.val"));
+    }
 }

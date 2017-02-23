@@ -56,6 +56,7 @@ import com.squareup.javapoet.WildcardTypeName;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Comparator;
@@ -81,7 +82,6 @@ import javax.lang.model.element.AnnotationValue;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
-import javax.lang.model.element.Modifier;
 import javax.lang.model.element.NestingKind;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.VariableElement;
@@ -339,10 +339,6 @@ public class StaticQualifierMetamodelProcessor extends AbstractProcessor impleme
         // Property ex. ref: person.address, name: address, type: Address
         String propertyName = toLower(descriptor.name());
         TypeName propertyType = TypeName.get(descriptor.propertyType());
-        @Nullable ClassName propertyQualifier = Optional.ofNullable(descriptor.propertyElement())
-                .filter(o -> o.getAnnotation(Qualify.class) != null)
-                .map(o -> ClassName.bestGuess(getQualifierName(getFlatName(o))))
-                .orElse(null);
 
         // the qualifier representing the property, ex. PersonAddress
         ClassName qualifierType = metamodelName.nestedClass(beanType.simpleName() + toUpper(propertyName));
@@ -411,10 +407,13 @@ public class StaticQualifierMetamodelProcessor extends AbstractProcessor impleme
                     }
                 });
 
-        if (propertyQualifier == null || !descriptor.isProperty()) {
-            entries.add("default: return null;\n", propertyType);
-        } else {
-            entries.add("default: return $T.self.data(key);\n", propertyQualifier);
+        List<CodeBlock> mixins = descriptor.mixins();
+        if (mixins.size() == 0) entries.add("default: return null;\n");
+        else if (mixins.size() == 1) entries.add("default: return ").add(mixins.get(0)).add(".data(key);\n");
+        else {
+            entries.add("default: Object r = null;$>\n");
+            mixins.forEach(m -> entries.add("if (r == null) r = ").add(m).add(".data(key);\n"));
+            entries.add("return r;$<\n");
         }
 
         qualifier.addMethod(methodBuilder("data")
@@ -487,13 +486,13 @@ public class StaticQualifierMetamodelProcessor extends AbstractProcessor impleme
                 if (method.getEnclosingElement().asType().toString().equals(Object.class.getName())) continue;
                 String fullName = method.getSimpleName().toString();
                 if (beanHelper.isGetter(beanElement, method, true)) {
-                    String name = toLower(fullName.charAt(0) == 'i' ?
-                            fullName.subSequence(2, fullName.length()).toString() :
-                            fullName.subSequence(3, fullName.length()).toString());
+                    String name = toLower(fullName.charAt(0) == 'i'
+                            ? /* is */fullName.subSequence(2, fullName.length()).toString()
+                            : /* get */fullName.subSequence(3, fullName.length()).toString());
                     ps.computeIfAbsent(checkValidName(name), descriptorFactory).getter(method);
                 }
                 if (beanHelper.isSetter(beanElement, method, true)) {
-                    String name = toLower(fullName.subSequence(3, fullName.length()).toString());
+                    String name = toLower(/* set */fullName.subSequence(3, fullName.length()).toString());
                     ps.computeIfAbsent(checkValidName(name), descriptorFactory).setter(method);
                 }
             } catch (Exception e) {
@@ -508,9 +507,7 @@ public class StaticQualifierMetamodelProcessor extends AbstractProcessor impleme
         for (VariableElement field : fields) {
             try {
                 if (field.getAnnotation(SkipStaticQualifierMetamodelGenerator.class) != null) continue;
-                Set<Modifier> modifiers = field.getModifiers();
-                if (modifiers.contains(STATIC)) continue;
-                if (!modifiers.contains(PUBLIC)) continue;
+                if (field.getModifiers().contains(STATIC) || !field.getModifiers().contains(PUBLIC)) continue;
                 String name = field.getSimpleName().toString();
                 ps.computeIfAbsent(checkValidName(name), descriptorFactory).field(field);
             } catch (Exception e) {
@@ -536,6 +533,8 @@ public class StaticQualifierMetamodelProcessor extends AbstractProcessor impleme
         private ExecutableElement setter;
         private VariableElement field;
         private TypeMirror type;
+        private @Nullable ClassName mixinMetamodel;
+        private @Nullable String mixinProperty;
 
         public MirroringMetamodel(TypeElement beanElement, String name) {
             this.beanElement = beanElement;
@@ -586,7 +585,22 @@ public class StaticQualifierMetamodelProcessor extends AbstractProcessor impleme
         }
 
         private void processAnnotated(Element element) {
+            Qualify.Extend extend = element.getAnnotation(Qualify.Extend.class);
+            if (extend != null) {
+                mixinMetamodel = ClassName.bestGuess(getQualifierName(getFlatName(qualifyExtendValue(extend))));
+                mixinProperty = extend.name().isEmpty() ? name : extend.name();
+            }
             getProviders().forEach(extension -> extension.processAnnotated(element, metadata()));
+        }
+
+        private TypeElement qualifyExtendValue(Qualify.Extend annotation) {
+            TypeElement typeMirror;
+            try {
+                annotation.value(); throw new RuntimeException("unreachable");
+            } catch (MirroredTypeException exception) {
+                typeMirror = asTypeElement(exception.getTypeMirror());
+            }
+            return typeMirror;
         }
 
         @Override public @Nullable ExecutableElement getterElement() { return getter; }
@@ -599,6 +613,18 @@ public class StaticQualifierMetamodelProcessor extends AbstractProcessor impleme
 
         @Override public Metaqualifier metadata() { return metaqualifier; }
 
+        @Override public List<CodeBlock> mixins() {
+            List<CodeBlock> mixins = new ArrayList<>();
+            if (mixinMetamodel != null) {
+                mixins.add(CodeBlock.of("$T.$L", mixinMetamodel, mixinProperty));
+            }
+            Optional.ofNullable(propertyElement())
+                    .filter(o -> isProperty()) // skip self
+                    .filter(o -> o.getAnnotation(Qualify.class) != null)
+                    .map(o -> ClassName.bestGuess(getQualifierName(getFlatName(o))))
+                    .ifPresent(t -> mixins.add(CodeBlock.of("$T.$L", t, SELF)));
+            return mixins;
+        }
         @Override public String toString() {
             return toStringHelper(this).add("name", name).add("getter", getter).add("setter", setter).toString();
         }

@@ -1,6 +1,8 @@
 package com.intendia.qualifier.processor;
 
+import com.squareup.javapoet.CodeBlock;
 import java.util.Collection;
+import java.util.List;
 import javax.annotation.Nullable;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.TypeElement;
@@ -28,6 +30,8 @@ public interface Metamodel {
     @Nullable VariableElement fieldElement();
 
     Metaqualifier metadata();
+
+    List<CodeBlock> mixins();
 
     default Collection<Metaextension<?>> extensions() { return metadata().values(); }
 
