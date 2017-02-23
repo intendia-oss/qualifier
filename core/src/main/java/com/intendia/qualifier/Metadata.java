@@ -7,6 +7,7 @@ import com.intendia.qualifier.Metadata.Mutadata;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import javax.annotation.Nullable;
@@ -35,17 +36,31 @@ public interface Metadata {
         return Optional.ofNullable(data(key));
     }
 
+    default <T> T req(Extension<T> key) {
+        return requireNonNull(data(key), key + " missing");
+    }
+
     /** Return the nearest mutable metadata or throws NPE if no mutable column exists. */
     default Mutadata mutate() {
         return this instanceof Mutadata ? (Mutadata) this : requireNonNull(data(METADATA_MUTATOR), "non mutable");
     }
 
     /** Creates a new mutable metadata to allow overrides values on this metadata. */
-    default Mutadata override() { return new HashMutadata(this); }
+    default Mutadata override() {
+        return new HashMutadata(this);
+    }
 
-    static <T extends Metadata> T override(T ref, Function<Metadata, T> cast) { return cast.apply(ref.override()); }
+    default Metadata override(Consumer<Mutadata> fn) {
+        Mutadata m = override(); fn.accept(m); return m;
+    }
 
-    static Mutadata create() { return new HashMutadata(null); }
+    static <T extends Metadata> T override(T ref, Function<Metadata, T> cast) {
+        return cast.apply(ref.override());
+    }
+
+    static Mutadata create() {
+        return new HashMutadata(null);
+    }
 
     interface Mutadata extends Metadata {
 

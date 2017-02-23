@@ -5,6 +5,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.Comparator;
 import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import javax.annotation.Nullable;
@@ -69,9 +70,9 @@ public interface PropertyQualifier<T, V> extends Qualifier<V> {
         return property == null ? null : compose(property);
     }
 
-    default PropertyQualifier<T, V> overrideProperty() {
-        return Metadata.override(this, PropertyQualifier::unchecked);
-    }
+    default PropertyQualifier<T, V> overrideProperty() { return unchecked(override()); }
+
+    default PropertyQualifier<T, V> overrideProperty(Consumer<Mutadata> fn) { return unchecked(override(fn)); }
 
     @SuppressWarnings("unchecked")
     static <T, V> PropertyQualifier<T, V> unchecked(Metadata q) {

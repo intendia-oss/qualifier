@@ -15,7 +15,6 @@ import static org.junit.Assert.assertNotNull;
 
 import com.intendia.qualifier.ComparableQualifier;
 import com.intendia.qualifier.Extension;
-import com.intendia.qualifier.Metadata;
 import com.intendia.qualifier.PropertyQualifier;
 import com.intendia.qualifier.Qualifier;
 import com.intendia.qualifier.example.ExampleModel.ExampleInnerInterface;
@@ -120,8 +119,8 @@ public class ExampleProcessorExtensionTest {
         PropertyQualifier<ExampleModel, String> q = ExampleModel__.stringValue;
         assertEquals(Integer.valueOf(1), q.data(ExampleAutoQualifier.EXAMPLE_AUTO_INTEGER));
 
-        assertEquals(Integer.valueOf(2), Metadata
-                .override(ExampleModel__.stringValue, PropertyQualifier::unchecked)
+        assertEquals(Integer.valueOf(2), PropertyQualifier
+                .unchecked(ExampleModel__.stringValue.override())
                 .mutate()
                 .put(ExampleAutoQualifier.EXAMPLE_AUTO_INTEGER, 2)
                 .data(ExampleAutoQualifier.EXAMPLE_AUTO_INTEGER));

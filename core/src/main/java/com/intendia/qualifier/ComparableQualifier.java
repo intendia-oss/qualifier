@@ -7,6 +7,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.Comparator;
 import java.util.Objects;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import javax.annotation.Nullable;
 
@@ -23,9 +24,9 @@ public interface ComparableQualifier<T> extends Qualifier<T> {
         return ByFunctionComparator.onResultOf(function, getTypeComparator());
     }
 
-    default ComparableQualifier<T> overrideComparable() {
-        return Metadata.override(this, ComparableQualifier::unchecked);
-    }
+    default ComparableQualifier<T> overrideComparable() { return unchecked(override()); }
+
+    default ComparableQualifier<T> overrideComparable(Consumer<Mutadata> fn) { return unchecked(override(fn)); }
 
     @SuppressWarnings("unchecked")
     static <T> ComparableQualifier<T> unchecked(Metadata q) {
