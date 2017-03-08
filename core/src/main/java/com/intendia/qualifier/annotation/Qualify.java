@@ -4,7 +4,6 @@ import static java.lang.annotation.ElementType.ANNOTATION_TYPE;
 import static java.lang.annotation.ElementType.FIELD;
 import static java.lang.annotation.ElementType.METHOD;
 import static java.lang.annotation.ElementType.TYPE;
-import static java.lang.annotation.RetentionPolicy.RUNTIME;
 import static java.lang.annotation.RetentionPolicy.SOURCE;
 
 import java.lang.annotation.Retention;
@@ -27,17 +26,17 @@ public @interface Qualify {
      * A tag interface for the AutoQualifier processor. Generates an extension for each annotation property and
      * a qualifier to access to this metadata.
      */
-    @Retention(RUNTIME) @Target(ANNOTATION_TYPE) @interface Auto {}
+    @Retention(SOURCE) @Target(ANNOTATION_TYPE) @interface Auto {}
 
     /**
      * Can be used in {@link Auto} properties of type {@link Class}. In this case, the extension and qualifier will
      * be of type {@link com.intendia.qualifier.Qualifier} instead of type {@link Class}. The {@link Class} should
      * be {@link Qualify}.
      */
-    @Retention(RUNTIME) @Target(METHOD) @interface Link {}
+    @Retention(SOURCE) @Target(METHOD) @interface Link {}
 
     /** Used in a {@link Qualify} to extends its metamodel with other metamodel. */
-    @Retention(RUNTIME) @Target({ TYPE, METHOD, FIELD }) @interface Extend {
+    @Retention(SOURCE) @Target({ TYPE, METHOD, FIELD }) @interface Extend {
         Class<?> value();
         /** (Optional) The referenced property name. Defaults to the same name. */
         String name() default "";

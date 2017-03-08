@@ -127,7 +127,7 @@ public class StaticQualifierMetamodelProcessor extends AbstractProcessor impleme
     @Override public SourceVersion getSupportedSourceVersion() { return SourceVersion.latestSupported(); }
 
     @Override public Set<String> getSupportedAnnotationTypes() {
-        return ImmutableSet.of(Qualify.class.getName(), Qualify.Auto.class.getName());
+        return ImmutableSet.of(Qualify.class.getCanonicalName(), Qualify.Auto.class.getCanonicalName());
     }
 
     @Override public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment round) {
