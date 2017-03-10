@@ -1,11 +1,10 @@
 package com.intendia.qualifier.annotation;
 
-import static java.lang.annotation.RetentionPolicy.SOURCE;
-
-import java.lang.annotation.Retention;
+import java.lang.annotation.Target;
 
 /** Allow define qualifier extensions (see Qualifier Extensions). */
-@Retention(SOURCE) public @interface QualifyExtension {
+@Target({})
+public @interface QualifyExtension {
 
     /** (Required) The qualifier extension key. */
     String key();
