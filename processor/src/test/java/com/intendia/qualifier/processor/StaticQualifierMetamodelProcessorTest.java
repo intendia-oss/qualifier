@@ -16,14 +16,13 @@ public class StaticQualifierMetamodelProcessorTest {
     @Test public void basicQualifier() {
         JavaFileObject model = JavaFileObjects.forSourceString("Model", "\n"
                 + "import com.intendia.qualifier.annotation.Qualify;\n"
-                + "import com.intendia.qualifier.annotation.QualifyExtension;\n"
                 + "\n"
                 + "@Qualify interface Model {\n"
                 + "    Child getChild();\n"
                 + "\n"
                 + "    void setChild(Child integer);\n"
                 + "\n"
-                + "    @Qualify(extend = @QualifyExtension(key = \"testInteger\", type = Integer.class, value = \"1\"))\n"
+                + "    @Qualify(extend = @Qualify.Entry(key = \"testInteger\", type = Integer.class, value = \"1\"))\n"
                 + "    Integer getConstantInteger();\n"
                 + "}");
         JavaFileObject child = JavaFileObjects.forSourceString("Model", "\n"

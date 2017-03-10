@@ -7,18 +7,18 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 
 import com.google.common.base.Predicate;
 import com.intendia.qualifier.annotation.Qualify;
-import com.intendia.qualifier.annotation.QualifyExtension;
+import com.intendia.qualifier.annotation.Qualify.Entry;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 @Qualify(extend = {
-        @QualifyExtension(key = "extension.string", type = String.class, value = "string value"),
-        @QualifyExtension(key = "extension.boolean", type = Boolean.class, value = "true"),
-        @QualifyExtension(key = "extension.int", type = Integer.class, value = "1"),
-        @QualifyExtension(key = "extension.enum", type = TimeUnit.class, value = "SECONDS"),
-        @QualifyExtension(key = "extension.valueOf", type = Color.class, value = "red"),
-        @QualifyExtension(key = "extension.class", type = Class.class, value = "java.lang.String"),
+        @Entry(key = "extension.string", type = String.class, value = "string value"),
+        @Entry(key = "extension.boolean", type = Boolean.class, value = "true"),
+        @Entry(key = "extension.int", type = Integer.class, value = "1"),
+        @Entry(key = "extension.enum", type = TimeUnit.class, value = "SECONDS"),
+        @Entry(key = "extension.valueOf", type = Color.class, value = "red"),
+        @Entry(key = "extension.class", type = Class.class, value = "java.lang.String"),
 })
 public interface ExampleModel {
     @ExampleAuto(string = "s", type = ExampleInnerInterface.class, link = Color.class, integer = 1, enumeration = SECONDS, enumerationList = {DAYS, HOURS})

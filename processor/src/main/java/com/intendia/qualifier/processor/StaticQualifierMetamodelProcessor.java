@@ -41,8 +41,6 @@ import com.intendia.qualifier.PropertyQualifier;
 import com.intendia.qualifier.Qualifier;
 import com.intendia.qualifier.annotation.Qualify;
 import com.intendia.qualifier.annotation.Qualify.Link;
-import com.intendia.qualifier.annotation.QualifyExtension;
-import com.intendia.qualifier.annotation.SkipStaticQualifierMetamodelGenerator;
 import com.squareup.javapoet.AnnotationSpec;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.CodeBlock;
@@ -146,8 +144,8 @@ public class StaticQualifierMetamodelProcessor extends AbstractProcessor impleme
                 print(NOTE, "ignored " + element + ", cause: already processed");
                 continue;
             }
-            if (element.getAnnotation(SkipStaticQualifierMetamodelGenerator.class) != null) {
-                print(NOTE, "ignored " + element + ", cause: marked with @SkipStaticQualifierMetamodelGenerator");
+            if (element.getAnnotation(Qualify.Skip.class) != null) {
+                print(NOTE, "ignored " + element + ", cause: marked with @Qualify.Skip");
                 continue;
             }
 
@@ -482,7 +480,7 @@ public class StaticQualifierMetamodelProcessor extends AbstractProcessor impleme
         for (ExecutableElement method : Iterables
                 .concat(beanHelper.getMethods(beanElement), beanHelper.getInnerMethods(beanElement))) {
             try {
-                if (method.getAnnotation(SkipStaticQualifierMetamodelGenerator.class) != null) continue;
+                if (method.getAnnotation(Qualify.Skip.class) != null) continue;
                 if (method.getEnclosingElement().asType().toString().equals(Object.class.getName())) continue;
                 String fullName = method.getSimpleName().toString();
                 if (beanHelper.isGetter(beanElement, method, true)) {
@@ -506,7 +504,7 @@ public class StaticQualifierMetamodelProcessor extends AbstractProcessor impleme
                 ? beanHelper.getFields(beanElement) : emptyList();
         for (VariableElement field : fields) {
             try {
-                if (field.getAnnotation(SkipStaticQualifierMetamodelGenerator.class) != null) continue;
+                if (field.getAnnotation(Qualify.Skip.class) != null) continue;
                 if (field.getModifiers().contains(STATIC) || !field.getModifiers().contains(PUBLIC)) continue;
                 String name = field.getSimpleName().toString();
                 ps.computeIfAbsent(checkValidName(name), descriptorFactory).field(field);
@@ -671,9 +669,9 @@ public class StaticQualifierMetamodelProcessor extends AbstractProcessor impleme
             });
         }
 
-        public Metaextension<?> use(QualifyExtension annotation) { return extension(annotation); }
+        public Metaextension<?> use(Qualify.Entry annotation) { return extension(annotation); }
 
-        private <T> Metaextension<T> extension(QualifyExtension annotation) {
+        private <T> Metaextension<T> extension(Qualify.Entry annotation) {
             final String key = annotation.key();
             final String str = annotation.value();
 
@@ -713,7 +711,7 @@ public class StaticQualifierMetamodelProcessor extends AbstractProcessor impleme
             } return type;
         }
 
-        private TypeMirror extensionType(QualifyExtension annotation) {
+        private TypeMirror extensionType(Qualify.Entry annotation) {
             TypeMirror typeMirror;
             try {
                 annotation.type(); throw new RuntimeException("unreachable");

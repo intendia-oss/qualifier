@@ -2,7 +2,7 @@
 package com.intendia.qualifier.processor;
 
 import com.intendia.qualifier.Extension;
-import com.intendia.qualifier.annotation.QualifyExtension;
+import com.intendia.qualifier.annotation.Qualify;
 import com.squareup.javapoet.CodeBlock;
 import java.util.Collection;
 import java.util.Optional;
@@ -14,7 +14,7 @@ public interface Metaqualifier {
 
     <T> Metaextension<T> put(Extension<T> key);
 
-    Metaextension<?> use(QualifyExtension annotation);
+    Metaextension<?> use(Qualify.Entry annotation);
 
     Collection<Metaextension<?>> values();
 
@@ -41,7 +41,7 @@ public interface Metaqualifier {
     }
 
     default <T> Metaextension<T> use(String key, T value) {
-        return use(Extension.<T>key(key), value);
+        return use(Extension.key(key), value);
     }
 
     default <T> Metaextension<T> use(String key, T value, T ignoreIfEqual) {

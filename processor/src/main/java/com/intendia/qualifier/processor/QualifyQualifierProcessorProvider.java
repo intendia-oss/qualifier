@@ -10,7 +10,6 @@ import static javax.lang.model.element.Modifier.PUBLIC;
 
 import com.google.auto.common.MoreElements;
 import com.intendia.qualifier.annotation.Qualify;
-import com.intendia.qualifier.annotation.QualifyExtension;
 import com.squareup.javapoet.ArrayTypeName;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.MethodSpec;
@@ -39,13 +38,13 @@ public class QualifyQualifierProcessorProvider extends QualifierProcessorService
     public QualifyQualifierProcessorProvider() { registerAnnotation(Qualify.class, this::processQualify); }
 
     private void processQualify(QualifierAnnotationAnalyzer.AnnotationContext<Qualify> ctx) {
-        for (QualifyExtension qualifyExtension : ctx.annotation().extend()) {
+        for (Qualify.Entry qualifyExtension : ctx.annotation().extend()) {
             addQualifyExtension(ctx.metadata(), ctx.annotatedElement(), ctx.annotationMirror(), qualifyExtension);
         }
     }
 
     public void addQualifyExtension(Metaqualifier context, Element annotatedElement,
-            AnnotationMirror annotationMirror, QualifyExtension qualifyExtension) {
+            AnnotationMirror annotationMirror, Qualify.Entry qualifyExtension) {
         final Metaextension<?> metaextension = context.use(qualifyExtension);
 
         final TypeMirror type = metaextension.type().get();
