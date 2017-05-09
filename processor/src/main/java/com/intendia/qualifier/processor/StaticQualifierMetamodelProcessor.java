@@ -365,15 +365,7 @@ public class StaticQualifierMetamodelProcessor extends AbstractProcessor impleme
 
         // Bean properties
         if (SELF.equals(descriptor.name())) {
-            // public Set<Qualifier<? super QualifiedClass, ?>> getPropertyQualifiers() {
-            final ParameterizedTypeName propertiesType = ParameterizedTypeName.get(ClassName.get(Collection.class),
-                    qualifierType(propertyType, WILDCARD));
-            qualifier.addMethod(methodBuilder("getProperties")
-                    .addModifiers(PUBLIC)
-                    .returns(propertiesType)
-                    .addStatement("return $L", PROPERTIES)
-                    .build());
-            descriptor.metadata().literal(Qualifier.CORE_PROPERTIES, "getProperties()");
+            descriptor.metadata().literal(Qualifier.CORE_PROPERTIES, "$L", PROPERTIES);
         }
 
         // public static final PersonAddress address = new PersonAddress();
@@ -442,7 +434,6 @@ public class StaticQualifierMetamodelProcessor extends AbstractProcessor impleme
             builder.add(new QualifyQualifierProcessorProvider());
             builder.add(new PropertyQualifierProcessorProvider());
             builder.add(new AutoQualifierProcessorProvider());
-            builder.add(new ComparableQualifierProcessorProvider());
 
             final Iterator<QualifierProcessorServiceProvider> iterator = loader.iterator();
             for (; ; ) {
@@ -614,7 +605,9 @@ public class StaticQualifierMetamodelProcessor extends AbstractProcessor impleme
         @Override public List<CodeBlock> mixins() {
             List<CodeBlock> mixins = new ArrayList<>();
             if (mixinMetamodel != null) {
-                mixins.add(CodeBlock.of("$T.$L", mixinMetamodel, mixinProperty));
+                // this casting ensures that mixin properties matches supper type
+                mixins.add(CodeBlock.of("(($T<? super $T>) $T.$L)",
+                        Qualifier.class, propertyType(), mixinMetamodel, mixinProperty));
             }
             Optional.ofNullable(propertyElement())
                     .filter(o -> isProperty()) // skip self

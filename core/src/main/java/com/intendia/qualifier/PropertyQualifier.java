@@ -1,4 +1,3 @@
-// Copyright 2013 Intendia, SL.
 package com.intendia.qualifier;
 
 import static java.util.Objects.requireNonNull;
@@ -54,8 +53,7 @@ public interface PropertyQualifier<T, V> extends Qualifier<V> {
         //noinspection Convert2Lambda IGP-1732 GWT optimize incompatible
         return data(PROPERTY_COMPARATOR.as(), new Supplier<Comparator<T>>() {
             @Override public Comparator<T> get() {
-                return ComparableQualifier.of(PropertyQualifier.this)
-                        .orderingOnResultOf(PropertyQualifier.this.getGetter());
+                return orderingOnResultOf(getGetter());
             }
         });
     }
@@ -108,7 +106,7 @@ class IdentityPropertyQualifier<X> implements PropertyQualifier<X, X> {
     }
 
     @Override public Comparator<X> getPropertyComparator() {
-        return ComparableQualifier.of(f).getTypeComparator();
+        return f.getTypeComparator();
     }
 }
 

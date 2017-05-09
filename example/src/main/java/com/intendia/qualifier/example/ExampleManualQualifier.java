@@ -5,7 +5,7 @@ import com.intendia.qualifier.Extension;
 import com.intendia.qualifier.Qualifier;
 
 @FunctionalInterface
-public interface ExampleManualExtension<V> extends Qualifier<V> {
+public interface ExampleManualQualifier<V> extends Qualifier<V> {
     Extension<String> STRING = Extension.key("simple.string");
     Extension<Integer> INTEGER = Extension.key("simple.integer");
     Extension<Class<?>> TYPE = Extension.key("simple.type");
@@ -16,7 +16,7 @@ public interface ExampleManualExtension<V> extends Qualifier<V> {
 
     default Class<?> getExampleType() { return data(TYPE, Object.class); }
 
-    static <V> ExampleManualExtension<V> of(Qualifier<V> q) {
-        return q instanceof ExampleManualExtension ? (ExampleManualExtension<V>) q : q::data;
+    static <V> ExampleManualQualifier<V> of(Qualifier<V> q) {
+        return q instanceof ExampleManualQualifier ? (ExampleManualQualifier<V>) q : q::data;
     }
 }

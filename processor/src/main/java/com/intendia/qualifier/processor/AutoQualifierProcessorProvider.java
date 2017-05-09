@@ -2,24 +2,18 @@
 package com.intendia.qualifier.processor;
 
 import static com.google.auto.common.AnnotationMirrors.getAnnotatedAnnotations;
-import static com.google.auto.common.MoreTypes.asDeclared;
 import static com.google.auto.common.MoreTypes.isTypeOf;
 import static com.google.common.base.CaseFormat.LOWER_CAMEL;
 import static com.google.common.base.CaseFormat.UPPER_CAMEL;
 import static com.intendia.qualifier.processor.StaticQualifierMetamodelProcessor.annotationFieldAsCodeBlock;
 import static com.intendia.qualifier.processor.StaticQualifierMetamodelProcessor.getFlatName;
 import static com.intendia.qualifier.processor.StaticQualifierMetamodelProcessor.getQualifierName;
-import static javax.lang.model.element.Modifier.PUBLIC;
 
 import com.intendia.qualifier.Extension;
-import com.intendia.qualifier.Qualifier;
 import com.intendia.qualifier.annotation.Qualify;
 import com.intendia.qualifier.annotation.Qualify.Link;
 import com.squareup.javapoet.ClassName;
-import com.squareup.javapoet.CodeBlock;
 import com.squareup.javapoet.MethodSpec;
-import com.squareup.javapoet.ParameterizedTypeName;
-import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeSpec;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -63,32 +57,13 @@ public class AutoQualifierProcessorProvider extends QualifierProcessorServicePro
                     boolean isLink = e.getAnnotation(Link.class) != null && isTypeOf(Class.class, pRetType);
 
                     String key = aLCName + "." + pLCName;
-                    Object value = values.get(e).getValue();
-
-                    String methodName = "get" + aUCName + pUCName;
-                    CodeBlock valueBlock;
-                    TypeName returnType;
 
                     if (!isLink) {
-                        metaqualifier.literal(key, "$L()", methodName);
-                        valueBlock = annotationFieldAsCodeBlock(getProcessingEnv(), e, values.get(e));
-                        returnType = TypeName.get(pRetType);
+                        metaqualifier.literal(key, annotationFieldAsCodeBlock(getProcessingEnv(), e, values.get(e)));
                     } else {
-                        String valType = getFlatName((TypeElement) types().asElement((DeclaredType) value));
-                        valueBlock = CodeBlock.builder().add("$T.self", ClassName.bestGuess(getQualifierName(valType)))
-                                .build();
-                        metaqualifier.literal(key, "$L()", methodName);
-                        returnType = ParameterizedTypeName.get(ClassName.get(Qualifier.class),
-                                TypeName.get(asDeclared(pRetType).getTypeArguments().get(0)));
+                        String valType = getFlatName((TypeElement) types().asElement((DeclaredType) values.get(e).getValue()));
+                        metaqualifier.literal(key, "$T.self", ClassName.bestGuess(getQualifierName(valType)));
                     }
-
-                    am.add(MethodSpec.methodBuilder(methodName)
-                            .addModifiers(PUBLIC)
-                            .returns(returnType)
-                            .addCode("return ")
-                            .addCode(valueBlock)
-                            .addCode(";\n")
-                            .build());
                 });
                 metaqualifier.value(autoAnnotations).ifPresent(aq ->
                         aq.add(ClassName.bestGuess(packageName + "." + aUCName + "Qualifier")));

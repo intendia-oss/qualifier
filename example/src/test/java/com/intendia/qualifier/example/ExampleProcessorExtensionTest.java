@@ -1,6 +1,5 @@
 package com.intendia.qualifier.example;
 
-import static com.intendia.qualifier.ComparableQualifier.COMPARABLE_COMPARATOR;
 import static com.intendia.qualifier.example.ExampleModelExampleInner__.ExampleInnerMetadata;
 import static com.intendia.qualifier.example.ExampleModel__.ExampleModelMetadata;
 import static com.intendia.qualifier.example.ExampleModel__.stringListValue;
@@ -13,7 +12,6 @@ import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 
-import com.intendia.qualifier.ComparableQualifier;
 import com.intendia.qualifier.Extension;
 import com.intendia.qualifier.PropertyQualifier;
 import com.intendia.qualifier.Qualifier;
@@ -35,7 +33,7 @@ public class ExampleProcessorExtensionTest {
     }
 
     @Test public void assert_that_typed_extension_works() {
-        ExampleManualExtension<String> q = ExampleManualExtension.of(ExampleModel__.stringValue);
+        ExampleManualQualifier<String> q = ExampleManualQualifier.of(ExampleModel__.stringValue);
         Class<?> expectedType = ExampleInnerInterface.class;
         assertNotNull(ExampleModel__.stringValue.data("simple.loaded"));
         assertEquals(Integer.valueOf(1), q.getExampleInteger());
@@ -85,9 +83,9 @@ public class ExampleProcessorExtensionTest {
     @Test public void assert_comparator_can_be_override() {
         Comparator<ExampleModel> stringComparator = ExampleModel__.stringValue.getPropertyComparator();
         Qualifier<ExampleModel> override = ExampleModelMetadata.overrideQualifier();
-        override.mutate().put(COMPARABLE_COMPARATOR, stringComparator);
+        override.mutate().put(Qualifier.COMPARABLE_COMPARATOR, stringComparator);
         // this is easy, just confirm comparable returns the override qualifier
-        assertEquals(stringComparator, ComparableQualifier.of(override).getTypeComparator());
+        assertEquals(stringComparator, override.getTypeComparator());
         // this is the important, confirm that identity decorator maintains the override comparator
         assertEquals(stringComparator, PropertyQualifier.asProperty(override).getPropertyComparator());
     }

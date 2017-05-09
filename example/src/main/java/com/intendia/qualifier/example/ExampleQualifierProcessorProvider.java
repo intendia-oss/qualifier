@@ -18,9 +18,9 @@ public class ExampleQualifierProcessorProvider extends QualifierProcessorService
         final ExampleManual value = simple.annotation();
         final TypeMirror classType = typeElementFor(Class.class).asType();
         simple.metadata()
-                .use(ExampleManualExtension.STRING, value.string()).done()
-                .use(ExampleManualExtension.INTEGER, value.integer()).done()
-                .literal(ExampleManualExtension.TYPE, "$T.class", parametersType(value)).type(classType).done()
+                .use(ExampleManualQualifier.STRING, value.string()).done()
+                .use(ExampleManualQualifier.INTEGER, value.integer()).done()
+                .literal(ExampleManualQualifier.TYPE, "$T.class", parametersType(value)).type(classType).done()
                 .use(LOADED, Instant.now().toString()).done()
                 .literal(LITERAL, "$S", "literal").done()
                 .use(ANONYMOUS, "this value is not accessible at run time").done();

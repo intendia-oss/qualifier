@@ -48,11 +48,19 @@ public interface Metaqualifier {
         return put(Extension.<T>key(key)).value(value, ignoreIfEqual);
     }
 
-    default <T> Metaextension<T> literal(Extension<T> key, String statement, Object... args) {
-        return put(key).valueBlock(CodeBlock.builder().add(statement, args).build());
-    }
-
     default <T> Metaextension<T> literal(String key, String statement, Object... args) {
         return literal(Extension.key(key), statement, args);
+    }
+
+    default <T> Metaextension<T> literal(Extension<T> key, String statement, Object... args) {
+        return literal(key, CodeBlock.builder().add(statement, args).build());
+    }
+
+    default <T> Metaextension<T> literal(String key, CodeBlock block) {
+        return literal(Extension.key(key), block);
+    }
+
+    default <T> Metaextension<T> literal(Extension<T> key, CodeBlock block) {
+        return put(key).valueBlock(block);
     }
 }

@@ -1,19 +1,16 @@
 // Copyright 2014 Intendia, SL.
 package com.intendia.qualifier.processor;
 
+import static com.intendia.qualifier.Qualifier.COMPARABLE_COMPARATOR;
 import static com.intendia.qualifier.Qualifier.CORE_GENERICS;
 import static com.intendia.qualifier.Qualifier.CORE_NAME;
 import static com.intendia.qualifier.Qualifier.CORE_TYPE;
-import static com.squareup.javapoet.MethodSpec.methodBuilder;
 import static java.util.stream.Collectors.joining;
-import static javax.lang.model.element.Modifier.PUBLIC;
 
 import com.google.auto.common.MoreElements;
+import com.intendia.qualifier.Qualifier;
 import com.intendia.qualifier.annotation.Qualify;
-import com.squareup.javapoet.ArrayTypeName;
 import com.squareup.javapoet.ClassName;
-import com.squareup.javapoet.MethodSpec;
-import com.squareup.javapoet.ParameterizedTypeName;
 import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeSpec;
 import com.squareup.javapoet.WildcardTypeName;
@@ -77,39 +74,29 @@ public class QualifyQualifierProcessorProvider extends QualifierProcessorService
         return ElementFilter.methodsIn(getProcessingEnv().getElementUtils().getAllMembers(classRepresenter));
     }
 
-    @Override public void processProperty(TypeSpec.Builder writer, Metamodel descriptor) {
+    @Override public void processProperty(TypeSpec.Builder writer, Metamodel ctx) {
         // Property name
-        writer.addMethod(methodBuilder("getName")
-                .addModifiers(PUBLIC)
-                .returns(String.class)
-                .addStatement("return $S", descriptor.name())
-                .build());
-        descriptor.metadata().put(CORE_NAME).valueBlock("getName()");
+        ctx.metadata().literal(CORE_NAME, "$S", ctx.name());
 
-        TypeMirror propertyType = descriptor.propertyType();
-        final List<? extends TypeMirror> propertyTypeArguments = propertyType instanceof DeclaredType
+        TypeMirror propertyType = ctx.propertyType();
+        List<? extends TypeMirror> generics = propertyType instanceof DeclaredType
                 ? ((DeclaredType) propertyType).getTypeArguments() : Collections.emptyList();
 
         // Property type
-        writer.addMethod(MethodSpec.methodBuilder("getType")
-                .addModifiers(PUBLIC)
-                .returns(ParameterizedTypeName.get(LANG_CLASS, TypeName.get(descriptor.propertyType())))
-                .addStatement("return $L$T.class",
-                        propertyTypeArguments.isEmpty() ? "" : "(Class) ",
-                        TypeName.get(types().erasure(descriptor.propertyType())))
-                .build());
-        descriptor.metadata().put(CORE_TYPE).valueBlock("getType()");
+        ctx.metadata().literal(CORE_TYPE, "$L$T.class",
+                generics.isEmpty() ? "" : "(Class) ",
+                TypeName.get(types().erasure(ctx.propertyType())));
 
         // Property generics
-        if (!propertyTypeArguments.isEmpty()) {
-            writer.addMethod(MethodSpec.methodBuilder("getGenerics")
-                    .addModifiers(PUBLIC)
-                    .returns(ArrayTypeName.of(ParameterizedTypeName.get(LANG_CLASS, WILDCARD)))
-                    .addStatement("return new Class<?>[]{$L}", propertyTypeArguments.stream()
-                            .map(t -> t.getKind() == TypeKind.WILDCARD ? "null" : t + ".class")
-                            .collect(joining(",")))
-                    .build());
-            descriptor.metadata().put(CORE_GENERICS).valueBlock("getGenerics()");
+        if (!generics.isEmpty()) {
+            ctx.metadata().literal(CORE_GENERICS, "new Class<?>[]{$L}", generics.stream()
+                    .map(t -> t.getKind() == TypeKind.WILDCARD ? "null" : t + ".class")
+                    .collect(joining(",")));
         }
+
+        // Property type comparator
+        final TypeMirror comparableType = types().erasure(typeElementFor(Comparable.class).asType());
+        final boolean isComparable = types().isAssignable(ctx.propertyType(), comparableType);
+        if (isComparable) ctx.metadata().literal(COMPARABLE_COMPARATOR, "$T.naturalComparator()", Qualifier.class);
     }
 }
