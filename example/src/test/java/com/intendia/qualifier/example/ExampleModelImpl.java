@@ -2,9 +2,10 @@
 package com.intendia.qualifier.example;
 
 import com.intendia.qualifier.annotation.Qualify;
+import com.intendia.qualifier.annotation.Qualify.Extend;
 import java.util.List;
 
-@Qualify
+@Qualify @Extend(ExampleModel.class)
 public class ExampleModelImpl implements ExampleModel {
     String stringValue;
     List<String> stringListValue;

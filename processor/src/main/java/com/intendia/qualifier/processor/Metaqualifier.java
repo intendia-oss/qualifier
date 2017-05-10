@@ -18,6 +18,8 @@ public interface Metaqualifier {
 
     Collection<Metaextension<?>> values();
 
+    void remove(Extension<?> key);
+
     // Helpers
 
     default <T> Optional<Metaextension<T>> get(String key) {

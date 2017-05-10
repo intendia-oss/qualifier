@@ -7,6 +7,7 @@ import static com.google.common.base.CaseFormat.LOWER_CAMEL;
 import static com.google.common.base.CaseFormat.UPPER_CAMEL;
 import static com.google.common.base.CaseFormat.UPPER_UNDERSCORE;
 import static com.google.common.base.MoreObjects.toStringHelper;
+import static com.google.common.base.Strings.isNullOrEmpty;
 import static com.google.common.base.Throwables.getCausalChain;
 import static com.google.common.base.Throwables.getStackTraceAsString;
 import static com.intendia.qualifier.processor.Metamodel.SELF;
@@ -507,7 +508,7 @@ public class StaticQualifierMetamodelProcessor extends AbstractProcessor impleme
         return unmodifiableCollection(ps.values());
     }
     private void processDescriptorError(Element method, Exception e, String str) {
-        processingEnv.getMessager().printMessage(ERROR, format("Error during " + str + " processing, "
+        print(ERROR, format("Error during " + str + " processing, "
                 + "cause: %s\n%s", getCausalChain(e).stream().map(Throwable::getLocalizedMessage)
                 .collect(joining(", caused by ")), getStackTraceAsString(e)), method);
     }
@@ -576,7 +577,11 @@ public class StaticQualifierMetamodelProcessor extends AbstractProcessor impleme
         private void processAnnotated(Element element) {
             Qualify.Extend extend = element.getAnnotation(Qualify.Extend.class);
             if (extend != null) {
-                mixinMetamodel = ClassName.bestGuess(getQualifierName(getFlatName(qualifyExtendValue(extend))));
+                if (mixinMetamodel != null) print(Kind.ERROR, "multiple mixin definitions", element);
+                TypeElement mixin = qualifyExtendValue(extend);
+                if (!mixin.equals(typeElementFor(Object.class))) {
+                    mixinMetamodel = ClassName.bestGuess(getQualifierName(getFlatName(mixin)));
+                }
                 mixinProperty = extend.name().isEmpty() ? name : extend.name();
             }
             getProviders().forEach(extension -> extension.processAnnotated(element, metadata()));
@@ -586,6 +591,16 @@ public class StaticQualifierMetamodelProcessor extends AbstractProcessor impleme
             TypeElement typeMirror;
             try {
                 annotation.value(); throw new RuntimeException("unreachable");
+            } catch (MirroredTypeException exception) {
+                typeMirror = asTypeElement(exception.getTypeMirror());
+            }
+            return typeMirror;
+        }
+
+        private TypeElement qualifyExtendValue(Qualify annotation) {
+            TypeElement typeMirror;
+            try {
+                annotation.mixin(); throw new RuntimeException("unreachable");
             } catch (MirroredTypeException exception) {
                 typeMirror = asTypeElement(exception.getTypeMirror());
             }
@@ -602,18 +617,44 @@ public class StaticQualifierMetamodelProcessor extends AbstractProcessor impleme
 
         @Override public Metaqualifier metadata() { return metaqualifier; }
 
+        /** The super qualifier user to extend this property metadata. */
+        @Override public @Nullable PropertyReference extend() {
+            if (mixinMetamodel != null && mixinProperty != null) {
+                return new PropertyReference(mixinMetamodel, mixinProperty);
+            }
+
+            // apply bean Qualify(mixin) if this property has no explicit @Extend
+            if (isProperty()) {
+                Qualify beanQualify = beanElement.getAnnotation(Qualify.class);
+                TypeElement classRepresenter = qualifyExtendValue(beanQualify);
+                if (classRepresenter != null && !classRepresenter.equals(typeElementFor(Object.class))) {
+                    return new PropertyReference(
+                            ClassName.bestGuess(getQualifierName(getFlatName(classRepresenter))),
+                            isNullOrEmpty(mixinProperty) ? name : mixinProperty);
+                }
+            }
+
+            return null;
+        }
+
+        /** List of qualifier that extends this property metadata. */
         @Override public List<CodeBlock> mixins() {
             List<CodeBlock> mixins = new ArrayList<>();
-            if (mixinMetamodel != null) {
+
+            PropertyReference extend = extend();
+            if (extend != null) {
                 // this casting ensures that mixin properties matches supper type
                 mixins.add(CodeBlock.of("(($T<? super $T>) $T.$L)",
-                        Qualifier.class, propertyType(), mixinMetamodel, mixinProperty));
+                        Qualifier.class, propertyType(), extend.bean, extend.property));
             }
+
+            // if this property type is qualified, then add it as an mixin
             Optional.ofNullable(propertyElement())
                     .filter(o -> isProperty()) // skip self
                     .filter(o -> o.getAnnotation(Qualify.class) != null)
                     .map(o -> ClassName.bestGuess(getQualifierName(getFlatName(o))))
                     .ifPresent(t -> mixins.add(CodeBlock.of("$T.$L", t, SELF)));
+
             return mixins;
         }
         @Override public String toString() {
@@ -715,6 +756,8 @@ public class StaticQualifierMetamodelProcessor extends AbstractProcessor impleme
         }
 
         @Override public Collection<Metaextension<?>> values() { return unmodifiableCollection(data.values()); }
+
+        @Override public void remove(Extension<?> key) { data.remove(key); }
 
         class LocalMetaextension<T> implements Metaextension<T> {
             private final Extension<T> key;

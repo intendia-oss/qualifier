@@ -12,7 +12,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
-@Qualify(extend = {
+@Qualify(mixin = ExampleMixin.class, extend = {
         @Entry(key = "extension.string", type = String.class, value = "string value"),
         @Entry(key = "extension.boolean", type = Boolean.class, value = "true"),
         @Entry(key = "extension.int", type = Integer.class, value = "1"),

@@ -1,5 +1,6 @@
 package com.intendia.qualifier.processor;
 
+import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.CodeBlock;
 import java.util.Collection;
 import java.util.List;
@@ -31,9 +32,20 @@ public interface Metamodel {
 
     Metaqualifier metadata();
 
+    @Nullable PropertyReference extend();
+
     List<CodeBlock> mixins();
 
     default Collection<Metaextension<?>> extensions() { return metadata().values(); }
 
     default boolean isProperty() { return !name().equals(SELF); }
+
+    class PropertyReference {
+        public final ClassName bean;
+        public final String property;
+        public PropertyReference(ClassName bean, String property) {
+            this.bean = bean;
+            this.property = property;
+        }
+    }
 }

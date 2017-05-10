@@ -20,6 +20,9 @@ public @interface Qualify {
     /** (Optional) An array of manual extensions. Use with caution, better use a specific annotation. */
     Entry[] extend() default {};
 
+    /** (Optional) Apply this extend to all properties without explicit extension definition. */
+    Class<?> mixin() default Object.class;
+
     /** Allow define qualifier extensions (see Qualifier Extensions). */
     @Target({}) @interface Entry {
 
@@ -50,7 +53,7 @@ public @interface Qualify {
     @Target({ TYPE, METHOD, FIELD }) @interface Extend {
 
         /** (Required) The <i>other</i> metamodel type. */
-        Class<?> value();
+        Class<?> value() default Object.class;
 
         /** (Optional) The referenced property name. Defaults to the same name. */
         String name() default "";
