@@ -1,0 +1,67 @@
+# Qualifier: The metadata sharing library 
+
+[![Maven Central](https://maven-badges.herokuapp.com/maven-central/com.intendia.qualifier/qualifier-parent/badge.svg)](https://maven-badges.herokuapp.com/maven-central/com.intendia.gwt.rxgwt/rxgwt-parent)
+[![Build Status](https://travis-ci.org/intendia-oss/qualifier.svg)](https://travis-ci.org/intendia-oss/qualifier) 
+[![Join the chat at https://gitter.im/intendia-oss/qualifier](https://badges.gitter.im/intendia-oss/qualifier.svg)](https://gitter.im/intendia-oss/qualifier?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+
+Java already support metadata using annotations ([JSR 175](https://www.jcp.org/en/jsr/detail?id=175)) and you can use 
+processors ([JSR 269](https://www.jcp.org/en/jsr/detail?id=269)) to process this metadata at compile time. This lib
+add high-level utilities to extract and share the metadata added using annotations at compile time based on processors.
+
+## So, what is this for?
+
+Sharing data, yep this is it. For example, you are creating a UI with tables, charts or forms. You will have a model,
+for example Person. If you use it in your code you will do something like…
+```java
+TableBuilder<Person> table = TableBuilder.builder()
+    .column("Full name", o -> o.firstName + " " + o.lastName)
+    .column("Weight", o -> MeasureRenderer.render(o.weight, KILOGRAM))
+    .column("Registered at", o -> DateRenderer.render(o.registeredAt, DATE))
+    .build();
+FormBuilder<Person> form = FormBuilder.builder()
+    .entry("First name", new StringBox())    
+    .entry("Last name", new StringBox())    
+    .entry("Weight", new MeasureBox(KILOGRAM))
+    .build();    
+```
+Those are just e imaginary builders, but those represent just a simple tool to build a widget to show or edit our model
+in a UI. There are a lot of metadata in those builders, how to represent the property, how to edit, how to describe, etc.
+So, first, where is the right place to put this metadata? yep, right, it is the model. What you expect is to move all
+those metadata to the model so you can generalize those builders and extract the metadata from the model itself. If
+we move this metadata to the model, the model will looks like this: 
+```java
+class Person {
+    public String firstName; // here there is a lot of metadata too
+    public String lastName; // the type (String), the field name (lastName) and even that String is a comparable type!
+    public String getFullName() { return firstName + " " + lastName; }
+    
+    @I18n(description = "Person weight.")
+    @Measure(KILOGRAM) public doule weight;
+    
+    @I18n(description = "Registration date.")
+    @Time(DATE) public Date registeredAt;
+}                                                       
+```
+At this point you should note that annotations are just supported in java by default, and that you can create a builder
+that extract the metadata using reflection, this is a super nice solution and you should use it and not this lib if it
+work for you. So, what does this lib. This lib defines a High-Level API (and kind of best-practices) to extract and use
+this metadata so both metadata extractor and metadata consumer can be developed independently and shared.
+
+This lib will generate a metamodel, and this typed metamodel is called `Qualifier`. For example, person will generate:
+```java
+TableBuilder<Person> table = TableBuilder.builder()
+    .column(Person_Metadata.fullName)
+    .column(Person_Metadata.weight)
+    .column(Person_Metadata.registeredAt)
+    .build();
+FormBuilder<Person> form = FormBuilder.builder()
+    .entry(Person_Metadata.firstName)    
+    .entry(Person_Metadata.lastName)    
+    .entry(Person_Metadata.weight)
+    .build();
+```
+You can even do this for all properties…
+```java
+TableBuilder<Person> table = TableBuilder.bulk(PersonMetamodel);
+FormBuilder<Person> form = FormBuilder.bulk(PersonMetamodel);
+```
