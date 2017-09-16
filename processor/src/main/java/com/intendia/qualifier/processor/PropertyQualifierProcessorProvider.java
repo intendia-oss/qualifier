@@ -1,4 +1,3 @@
-// Copyright 2015 Intendia, SL.
 package com.intendia.qualifier.processor;
 
 import static com.intendia.qualifier.PropertyQualifier.PROPERTY_GETTER;

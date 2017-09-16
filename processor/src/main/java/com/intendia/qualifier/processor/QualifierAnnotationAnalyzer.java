@@ -1,4 +1,3 @@
-// Copyright 2014 Intendia, SL.
 package com.intendia.qualifier.processor;
 
 import java.lang.annotation.Annotation;

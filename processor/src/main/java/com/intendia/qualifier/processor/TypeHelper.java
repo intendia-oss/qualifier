@@ -1,4 +1,3 @@
-// Copyright 2013 Intendia, SL.
 package com.intendia.qualifier.processor;
 
 import com.google.common.collect.ImmutableList;

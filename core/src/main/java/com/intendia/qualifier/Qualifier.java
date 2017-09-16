@@ -1,4 +1,3 @@
-// Copyright 2015 Intendia, SL.
 package com.intendia.qualifier;
 
 import static com.intendia.qualifier.ByFunctionComparator.toStringComparator;
