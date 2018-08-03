@@ -1,15 +1,11 @@
 package com.intendia.qualifier.processor;
 
-import static com.google.testing.compile.JavaSourcesSubjectFactory.javaSources;
+import static com.google.testing.compile.JavaSourcesSubject.assertThat;
 import static com.intendia.qualifier.processor.ProcessorTestUtils.qualifierProcessors;
-import static org.truth0.Truth.ASSERT;
 
 import com.google.testing.compile.JavaFileObjects;
-import com.google.testing.compile.JavaSourcesSubject;
-import java.util.Arrays;
 import javax.tools.JavaFileObject;
 import org.junit.Test;
-import org.truth0.AbstractVerb;
 
 public class StaticQualifierMetamodelProcessorTest {
     @Test public void basicQualifier() {
@@ -32,13 +28,6 @@ public class StaticQualifierMetamodelProcessorTest {
                 + "\n"
                 + "    void setInteger(Integer integer);\n"
                 + "}");
-        assertJavaSources()
-                .that(Arrays.asList(model, child))
-                .processedWith(qualifierProcessors())
-                .compilesWithoutError();
-    }
-
-    public AbstractVerb.DelegatedVerb<JavaSourcesSubject, Iterable<? extends JavaFileObject>> assertJavaSources() {
-        return ASSERT.about(javaSources());
+        assertThat(model, child).processedWith(qualifierProcessors()).compilesWithoutError();
     }
 }

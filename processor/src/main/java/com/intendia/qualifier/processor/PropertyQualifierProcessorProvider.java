@@ -17,7 +17,6 @@ import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.VariableElement;
 
 public class PropertyQualifierProcessorProvider extends QualifierProcessorServiceProvider {
-    private static final ClassName LANG_STRING = ClassName.get(String.class);
 
     @Override public void processProperty(TypeSpec.Builder writer, Metamodel descriptor) {
         if (!descriptor.isProperty()) return;

@@ -15,9 +15,8 @@
         <dependency><groupId>com.squareup</groupId><artifactId>javapoet</artifactId></dependency>
         <!-- Optional -->
         <dependency><groupId>com.google.code.findbugs</groupId><artifactId>jsr305</artifactId><optional>true</optional></dependency>
-        <!-- Test -->
+        <!-- Tests -->
         <dependency><groupId>com.google.testing.compile</groupId><artifactId>compile-testing</artifactId><scope>test</scope></dependency>
-        <dependency><groupId>org.truth0</groupId><artifactId>truth</artifactId><scope>test</scope></dependency>
     </dependencies><!-- @formatter:on -->
 
     <build>

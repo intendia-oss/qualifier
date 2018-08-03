@@ -48,7 +48,6 @@ public class AutoQualifierProcessorProvider extends QualifierProcessorServicePro
             for (ExecutableElement e : values.keySet()) {
                 metaqualifier.value(autoMethods).ifPresent(am -> {
                     String pLCName = e.getSimpleName().toString();
-                    String pUCName = LOWER_CAMEL.converterTo(UPPER_CAMEL).convert(pLCName);
                     TypeMirror pRetType = e.getReturnType();
                     if (pRetType.getKind().isPrimitive()) {
                         pRetType = types().boxedClass((PrimitiveType) pRetType).asType();

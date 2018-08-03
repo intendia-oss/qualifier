@@ -7,6 +7,7 @@ import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 /**
@@ -26,26 +27,13 @@ public interface PropertyQualifier<T, V> extends Qualifier<V> {
 
     default String getPath() { return data(PROPERTY_PATH, ""); }
 
-    //XXX experimental: utility to extract path without name
-    default String getPath(String concat) {
-        final String path = getPath();
-        if (path.isEmpty()) return concat;
-        else return getPath().substring(0, path.length() - getName().length()) + concat;
-    }
-
     /** @throws RuntimeException if not {@link #isReadable()} */
-    default Function<T, V> getGetter() {
-        return requireNonNull(data(PROPERTY_GETTER.as()),
-                "property " + getType() + "." + getName() + " is not readable");
-    }
+    default Function<T, V> getGetter() { return req(PROPERTY_GETTER.as()); }
 
     default Boolean isReadable() { return data(PROPERTY_GETTER) != null; }
 
     /** @throws RuntimeException if not {@link #isWritable()} */
-    default BiConsumer<T, V> getSetter() {
-        return requireNonNull(data(PROPERTY_SETTER.as()),
-                "property " + getType() + "." + getName() + " is not writable");
-    }
+    default BiConsumer<T, V> getSetter() { return req(PROPERTY_SETTER.as()); }
 
     default Boolean isWritable() { return data(PROPERTY_SETTER) != null; }
 
@@ -68,9 +56,13 @@ public interface PropertyQualifier<T, V> extends Qualifier<V> {
         return property == null ? null : compose(property);
     }
 
-    default PropertyQualifier<T, V> overrideProperty() { return unchecked(override()); }
+    default PropertyQualifier<T, V> overrideProperty() {
+        return PropertyQualifier.unchecked(override());
+    }
 
-    default PropertyQualifier<T, V> overrideProperty(Consumer<Mutadata> fn) { return unchecked(override(fn)); }
+    default PropertyQualifier<T, V> overrideProperty(Consumer<Mutadata> fn) {
+        return PropertyQualifier.unchecked(override(fn));
+    }
 
     @SuppressWarnings("unchecked")
     static <T, V> PropertyQualifier<T, V> unchecked(Metadata q) {
@@ -81,19 +73,15 @@ public interface PropertyQualifier<T, V> extends Qualifier<V> {
         return q instanceof PropertyQualifier ? (PropertyQualifier<?, V>) q : q::data;
     }
 
-    static <V> PropertyQualifier<V, V> asProperty(Qualifier<V> q) {
-        return new IdentityPropertyQualifier<>(q);
-    }
+    static <V> PropertyQualifier<V, V> asProperty(Qualifier<V> q) { return new IdentityPropertyQualifier<>(q); }
 }
 
 class IdentityPropertyQualifier<X> implements PropertyQualifier<X, X> {
     private final Qualifier<X> f;
 
-    IdentityPropertyQualifier(Qualifier<X> f) {
-        this.f = f;
-    }
+    IdentityPropertyQualifier(Qualifier<X> f) { this.f = f; }
 
-    @Override public @Nullable Object data(String key) {
+    @Override public @Nullable Object data(@Nonnull String key) {
         switch (key) {
             case PROPERTY_GETTER_KEY: return getGetter();
             case PROPERTY_COMPARATOR_KEY: return getPropertyComparator();
@@ -101,13 +89,9 @@ class IdentityPropertyQualifier<X> implements PropertyQualifier<X, X> {
         }
     }
 
-    @Override public Function<X, X> getGetter() {
-        return Function.identity();
-    }
+    @Override public Function<X, X> getGetter() { return Function.identity(); }
 
-    @Override public Comparator<X> getPropertyComparator() {
-        return f.getTypeComparator();
-    }
+    @Override public Comparator<X> getPropertyComparator() { return f.getTypeComparator(); }
 }
 
 /**
@@ -131,7 +115,9 @@ class CompositionPropertyQualifier<X, Y, Z> implements PropertyQualifier<X, Z> {
                 Y y = fGetter.apply(x);
                 return y == null ? null : gGetter.apply(y);
             };
-        } else this.getter = null;
+        } else {
+            this.getter = null;
+        }
 
         if (f.isReadable() && g.isWritable()) {
             BiConsumer<? super Y, Z> gSetter = g.getSetter();
@@ -141,10 +127,12 @@ class CompositionPropertyQualifier<X, Y, Z> implements PropertyQualifier<X, Z> {
                         + "to set composed property " + g.getType() + "." + g.getName());
                 gSetter.accept(y, z);
             };
-        } else this.setter = null;
+        } else {
+            this.setter = null;
+        }
     }
 
-    @Override public @Nullable Object data(String key) {
+    @Override public @Nullable Object data(@Nonnull String key) {
         switch (key) {
             case CORE_NAME_KEY: return getName();
             case CORE_TYPE_KEY: return getType();
@@ -157,21 +145,13 @@ class CompositionPropertyQualifier<X, Y, Z> implements PropertyQualifier<X, Z> {
         }
     }
 
-    @Override public String getName() {
-        return g.getName();
-    }
+    @Override public String getName() { return g.getName(); }
 
-    @Override public Class<Z> getType() {
-        return g.getType();
-    }
+    @Override public Class<Z> getType() { return g.getType(); }
 
-    @Override public String getPath() {
-        return f.getPath() + "." + g.getPath();
-    }
+    @Override public String getPath() { return f.getPath() + "." + g.getPath(); }
 
-    @Override public Class<?>[] getGenerics() {
-        return g.getGenerics();
-    }
+    @Override public Class<?>[] getGenerics() { return g.getGenerics(); }
 
     @Override public Comparator<X> getPropertyComparator() {
         Function<X, Y> fGetter = f.getGetter();

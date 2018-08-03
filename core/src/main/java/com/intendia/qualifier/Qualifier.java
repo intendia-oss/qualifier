@@ -1,13 +1,9 @@
 package com.intendia.qualifier;
 
-import static com.intendia.qualifier.ByFunctionComparator.toStringComparator;
-import static com.intendia.qualifier.NaturalOrderComparator.natural;
 import static java.util.Collections.emptySet;
-import static java.util.Objects.requireNonNull;
 
 import java.util.Collection;
 import java.util.Comparator;
-import java.util.Objects;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import javax.annotation.Nullable;
@@ -27,9 +23,9 @@ public interface Qualifier<T> extends Metadata {
     Extension<Comparator<?>> COMPARABLE_COMPARATOR = Extension.key(COMPARABLE_COMPARATOR_KEY);
     Class<?>[] NO_GENERICS = new Class[0];
 
-    default String getName() { return data(CORE_NAME); }
+    default String getName() { return req(CORE_NAME); }
 
-    default Class<T> getType() { return data(CORE_TYPE.as()); }
+    default Class<T> getType() { return req(CORE_TYPE.as()); }
 
     default Class<?>[] getGenerics() { return data(CORE_GENERICS, NO_GENERICS); }
 
@@ -48,12 +44,11 @@ public interface Qualifier<T> extends Metadata {
     }
 
     default Comparator<T> getTypeComparator() {
-        //noinspection unchecked
         return data(COMPARABLE_COMPARATOR.as(), toStringComparator());
     }
 
     default <F> Comparator<F> orderingOnResultOf(Function<F, ? extends T> function) {
-        return ByFunctionComparator.onResultOf(function, getTypeComparator());
+        return Comparator.comparing(function, getTypeComparator());
     }
 
     default Qualifier<T> overrideQualifier() { return unchecked(override()); }
@@ -77,82 +72,18 @@ public interface Qualifier<T> extends Metadata {
         };
     }
 
+    @SuppressWarnings("unchecked")
     static <T extends Comparable<T>> Comparator<T> naturalComparator() {
-        //noinspection unchecked
         return (Comparator<T>) Defaults.NATURAL_COMPARATOR;
     }
 
+    @SuppressWarnings("unchecked")
     static <T> Comparator<T> toStringComparator() {
-        //noinspection unchecked
         return (Comparator<T>) Defaults.TO_STRING_COMPARATOR;
     }
 }
 
-final class NullsFirstComparator<T> implements Comparator<T> {
-    final Comparator<? super T> comparator;
-
-    NullsFirstComparator(Comparator<? super T> comparator) { this.comparator = comparator; }
-
-    @Override public int compare(@Nullable T left, @Nullable T right) {
-        if (left == right) return 0;
-        if (left == null) return RIGHT_IS_GREATER;
-        if (right == null) return LEFT_IS_GREATER;
-        return comparator.compare(left, right);
-    }
-
-    @Override public String toString() {
-        return comparator + ".nullsFirst()";
-    }
-
-    static final int LEFT_IS_GREATER = 1;
-    static final int RIGHT_IS_GREATER = -1;
-}
-
 final class Defaults {
-    static Comparator<?> TO_STRING_COMPARATOR = new NullsFirstComparator<>(toStringComparator());
-    static Comparator<?> NATURAL_COMPARATOR = new NullsFirstComparator<>(natural());
-}
-
-final class ByFunctionComparator<F, T> implements java.util.Comparator<F> {
-
-    static <F, T> java.util.Comparator<F> onResultOf(Function<F, ? extends T> fn, Comparator<T> ordering) {
-        return new ByFunctionComparator<>(fn, ordering);
-    }
-
-    static java.util.Comparator<Object> toStringComparator() {
-        //noinspection RedundantTypeArguments
-        return ByFunctionComparator.<Object, String>onResultOf(Objects::toString, natural());
-    }
-
-    final Function<F, ? extends T> fn;
-    final Comparator<T> ordering;
-
-    private ByFunctionComparator(Function<F, ? extends T> fn, Comparator<T> ordering) {
-        this.fn = requireNonNull(fn);
-        this.ordering = requireNonNull(ordering);
-    }
-
-    @Override public int compare(F left, F right) {
-        return ordering.compare(fn.apply(left), fn.apply(right));
-    }
-
-    @Override public String toString() {
-        return ordering + ".onResultOf(" + fn + ")";
-    }
-
-}
-
-final class NaturalOrderComparator implements java.util.Comparator<Comparable<Object>> {
-    static Comparator<?> INSTANCE = new NaturalOrderComparator();
-
-    public static <T extends Comparable<T>> Comparator<T> natural() {
-        //noinspection unchecked
-        return (Comparator<T>) INSTANCE;
-    }
-
-    @Override public int compare(Comparable<Object> c1, Comparable<Object> c2) {
-        return c1.compareTo(c2);
-    }
-
-    @Override public String toString() { return "natural()"; }
+    static Comparator<?> TO_STRING_COMPARATOR = Comparator.nullsFirst(Comparator.comparing(Object::toString));
+    static Comparator<?> NATURAL_COMPARATOR = Comparator.nullsFirst(Comparator.naturalOrder());
 }

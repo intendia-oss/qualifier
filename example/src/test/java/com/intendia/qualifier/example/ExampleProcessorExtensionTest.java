@@ -74,7 +74,7 @@ public class ExampleProcessorExtensionTest {
         assertArrayEquals(new TimeUnit[] { DAYS, HOURS }, q.getExampleAutoEnumerationListWithDefaults());
     }
 
-    @Test public void test_works() throws Exception {
+    @Test public void test_works() {
         assertNotNull(ExampleModelMetadata);
         assertNotNull(ExampleInnerMetadata);
         assertEquals(List.class, stringListValue.getType());
@@ -94,17 +94,14 @@ public class ExampleProcessorExtensionTest {
         PropertyQualifier<ExampleModel, ExampleModel> qSelf = PropertyQualifier.asProperty(ExampleModelMetadata);
         assertEquals("", qSelf.getPath());
         assertEquals("self", qSelf.getName());
-        assertEquals("override", qSelf.getPath("override"));
 
         PropertyQualifier<ExampleModel, String> qString = ExampleModel__.stringValue;
         assertEquals("stringValue", qString.getPath());
         assertEquals("stringValue", qString.getName());
-        assertEquals("override", qString.getPath("override"));
 
         PropertyQualifier<ExampleModel, String> qColor = ExampleModel__.colorValue.compose(Color__.name);
         assertEquals("colorValue.name", qColor.getPath());
         assertEquals("name", qColor.getName());
-        assertEquals("colorValue.override", qColor.getPath("override"));
     }
 
     @Test public void assert_property_resolution_works() {

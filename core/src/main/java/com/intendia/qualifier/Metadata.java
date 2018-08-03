@@ -9,6 +9,7 @@ import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 @FunctionalInterface
@@ -85,7 +86,7 @@ class HashMutadata implements Mutadata {
         this.parent = parent;
     }
 
-    @Override public @Nullable Object data(String key) {
+    @Override public @Nullable Object data(@Nonnull String key) {
         if (METADATA_MUTATOR_KEY.equals(key)) return this;
         return parent == null || data.containsKey(key) ? data.get(key) : parent.data(key);
     }
