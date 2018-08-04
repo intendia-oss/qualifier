@@ -1,7 +1,9 @@
 package com.intendia.qualifier.processor;
 
+import static com.google.auto.common.AnnotationMirrors.getAnnotatedAnnotations;
 import static com.google.auto.common.MoreTypes.asDeclared;
 import static com.google.auto.common.MoreTypes.asTypeElement;
+import static com.google.auto.common.MoreTypes.isTypeOf;
 import static com.google.common.base.CaseFormat.LOWER_CAMEL;
 import static com.google.common.base.CaseFormat.UPPER_CAMEL;
 import static com.google.common.base.CaseFormat.UPPER_UNDERSCORE;
@@ -9,9 +11,17 @@ import static com.google.common.base.MoreObjects.toStringHelper;
 import static com.google.common.base.Strings.isNullOrEmpty;
 import static com.google.common.base.Throwables.getCausalChain;
 import static com.google.common.base.Throwables.getStackTraceAsString;
+import static com.intendia.qualifier.PropertyQualifier.PROPERTY_GETTER;
+import static com.intendia.qualifier.PropertyQualifier.PROPERTY_PATH;
+import static com.intendia.qualifier.PropertyQualifier.PROPERTY_SETTER;
+import static com.intendia.qualifier.Qualifier.COMPARABLE_COMPARATOR;
+import static com.intendia.qualifier.Qualifier.CORE_GENERICS;
+import static com.intendia.qualifier.Qualifier.CORE_NAME;
+import static com.intendia.qualifier.Qualifier.CORE_TYPE;
 import static com.intendia.qualifier.processor.Metamodel.SELF;
 import static com.squareup.javapoet.MethodSpec.methodBuilder;
 import static java.lang.String.format;
+import static java.util.Arrays.stream;
 import static java.util.Collections.emptyList;
 import static java.util.Collections.unmodifiableCollection;
 import static java.util.Objects.requireNonNull;
@@ -40,6 +50,7 @@ import com.intendia.qualifier.Metadata;
 import com.intendia.qualifier.PropertyQualifier;
 import com.intendia.qualifier.Qualifier;
 import com.intendia.qualifier.annotation.Qualify;
+import com.intendia.qualifier.annotation.Qualify.Auto;
 import com.intendia.qualifier.annotation.Qualify.Link;
 import com.squareup.javapoet.AnnotationSpec;
 import com.squareup.javapoet.ClassName;
@@ -68,7 +79,9 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.ServiceLoader;
 import java.util.Set;
+import java.util.function.BiConsumer;
 import java.util.function.Function;
+import java.util.stream.Stream;
 import javax.annotation.Generated;
 import javax.annotation.Nullable;
 import javax.annotation.processing.AbstractProcessor;
@@ -76,6 +89,7 @@ import javax.annotation.processing.ProcessingEnvironment;
 import javax.annotation.processing.Processor;
 import javax.annotation.processing.RoundEnvironment;
 import javax.lang.model.SourceVersion;
+import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.AnnotationValue;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
@@ -86,6 +100,7 @@ import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.MirroredTypeException;
 import javax.lang.model.type.PrimitiveType;
+import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.Elements;
 import javax.lang.model.util.SimpleAnnotationValueVisitor7;
@@ -125,7 +140,7 @@ public class StaticQualifierMetamodelProcessor extends AbstractProcessor impleme
     @Override public SourceVersion getSupportedSourceVersion() { return SourceVersion.latestSupported(); }
 
     @Override public Set<String> getSupportedAnnotationTypes() {
-        return ImmutableSet.of(Qualify.class.getCanonicalName(), Qualify.Auto.class.getCanonicalName());
+        return ImmutableSet.of(Qualify.class.getCanonicalName(), Auto.class.getCanonicalName());
     }
 
     @Override public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment round) {
@@ -165,7 +180,7 @@ public class StaticQualifierMetamodelProcessor extends AbstractProcessor impleme
             }
         }
 
-        for (Element element : round.getElementsAnnotatedWith(Qualify.Auto.class)) {
+        for (Element element : round.getElementsAnnotatedWith(Auto.class)) {
             try {
                 String qUCName = element.getSimpleName().toString();
                 String qLCName = UPPER_CAMEL.converterTo(LOWER_CAMEL).convert(qUCName);
@@ -205,17 +220,17 @@ public class StaticQualifierMetamodelProcessor extends AbstractProcessor impleme
                             .initializer("$T.key($L)", Extension.class, kName)
                             .build());
                     //default Unit<?> unit() { return data(MEASURE_UNIT_OF_MEASURE, Unit.ONE); }
-                    Optional<CodeBlock> defaultLiteral = Optional
+                    Optional<CodeBlock> def = Optional
                             .ofNullable(aElement.getDefaultValue())
                             .filter(v -> !isLink /*link not supported*/)
                             .map(a -> annotationFieldAsCodeBlock(processingEnv, aElement, aElement.getDefaultValue()));
                     qualifier.addMethod(methodBuilder("get" + qUCName + pUCName)
                             .addModifiers(DEFAULT, PUBLIC)
                             .returns(vTypeName)
-                            .addCode("return data($N" + (isLink ? ".as()" : ""), eName)
-                            .addCode(!defaultLiteral.isPresent()
-                                    ? CodeBlock.builder().add(");\n", eName).build()
-                                    : CodeBlock.builder().add(", ").add(defaultLiteral.get()).add(");\n").build())
+                            .addCode("return data(")
+                            .addCode(Stream.of(CodeBlock.of("$N" + (isLink ? ".as()" : ""), eName), def.orElse(null))
+                                    .filter(Objects::nonNull).collect(CodeBlock.joining(", ")))
+                            .addCode(");\n")
                             .build());
                 }
 
@@ -431,9 +446,9 @@ public class StaticQualifierMetamodelProcessor extends AbstractProcessor impleme
             final ImmutableList.Builder<QualifierProcessorServiceProvider> builder = new ImmutableList.Builder<>();
 
             // Core extensions (must be executed first)
-            builder.add(new QualifyQualifierProcessorProvider());
-            builder.add(new PropertyQualifierProcessorProvider());
-            builder.add(new AutoQualifierProcessorProvider());
+            builder.add(new QualifyProcessor());
+            builder.add(new PropertyProcessor());
+            builder.add(new AutoProcessor());
 
             final Iterator<QualifierProcessorServiceProvider> iterator = loader.iterator();
             for (; ; ) {
@@ -899,5 +914,110 @@ public class StaticQualifierMetamodelProcessor extends AbstractProcessor impleme
         requireNonNull(clazz.getCanonicalName(), () -> clazz + " has no canonical name (local or anonymous class)");
         return requireNonNull(env.getElementUtils().getTypeElement(clazz.getCanonicalName()),
                 "element for type " + clazz + " not found");
+    }
+
+    static class QualifyProcessor extends QualifierProcessorServiceProvider {
+
+        @Override public void processAnnotated(Element el, Metaqualifier meta) {
+            annotationApply(el, Qualify.class, a -> stream(a.extend()).forEach(meta::use));
+        }
+
+        @Override public void processProperty(Metamodel ctx) {
+            // Property name
+            ctx.metadata().literal(CORE_NAME, "$S", ctx.name());
+
+            TypeMirror propertyType = ctx.propertyType();
+            List<? extends TypeMirror> generics = propertyType instanceof DeclaredType
+                    ? ((DeclaredType) propertyType).getTypeArguments() : emptyList();
+
+            // Property type
+            ctx.metadata().literal(CORE_TYPE, "$L$T.class",
+                    generics.isEmpty() ? "" : "(Class) ",
+                    TypeName.get(types().erasure(ctx.propertyType())));
+
+            // Property generics
+            if (!generics.isEmpty()) {
+                ctx.metadata().literal(CORE_GENERICS, "new Class<?>[]{$L}", generics.stream()
+                        .map(t -> t.getKind() == TypeKind.WILDCARD ? "null" : t + ".class")
+                        .collect(joining(",")));
+            }
+
+            // Property type comparator
+            final TypeMirror comparableType = types().erasure(typeElementFor(Comparable.class).asType());
+            final boolean isComparable = types().isAssignable(ctx.propertyType(), comparableType);
+            if (isComparable) ctx.metadata().literal(COMPARABLE_COMPARATOR, "$T.naturalComparator()", Qualifier.class);
+        }
+    }
+
+    static class PropertyProcessor extends QualifierProcessorServiceProvider {
+
+        @Override public void processProperty(TypeSpec.Builder writer, Metamodel descriptor) {
+            if (!descriptor.isProperty()) return;
+
+            // Bean ex. ref: person, name: self, type: Person
+            ClassName beanType = ClassName.get(descriptor.beanElement());
+            // Property ex. ref: person.address, name: address, type: Address
+            TypeName propertyType = TypeName.get(descriptor.propertyType());
+
+            // extends PropertyQualifier<BeanT,PropertyT>
+            writer.addSuperinterface(ParameterizedTypeName.get(
+                    ClassName.get(PropertyQualifier.class), beanType, propertyType));
+
+            // Property path
+            descriptor.metadata().literal(PROPERTY_PATH, "getName()");
+
+            final ExecutableElement getter = descriptor.getterElement();
+            final ExecutableElement setter = descriptor.setterElement();
+            final VariableElement field = descriptor.fieldElement();
+            final boolean fieldReadable = field != null;
+            final boolean fieldWritable = field != null && !field.getModifiers().contains(FINAL);
+
+            // Property getter
+            if (getter != null || fieldReadable) {
+                CodeBlock.Builder g = CodeBlock.builder();
+                g.add("($T) ", ParameterizedTypeName.get(ClassName.get(Function.class), beanType, propertyType));
+                if (getter == null) g.add("t -> t.$N", field.getSimpleName());
+                else if (getter.getParameters().isEmpty()) g.add("$T::$N", beanType, getter.getSimpleName());
+                else g.add("$T::$N", ClassName.get(getter.getEnclosingElement().asType()), getter.getSimpleName());
+                descriptor.metadata().literal(PROPERTY_GETTER, g.build());
+            }
+
+            // Property setter
+            if (setter != null || fieldWritable) {
+                CodeBlock.Builder s = CodeBlock.builder();
+                s.add("($T) ", ParameterizedTypeName.get(ClassName.get(BiConsumer.class), beanType, propertyType));
+                if (setter == null) s.add("(t, v) -> t.$N = v", field.getSimpleName());
+                else if (setter.getParameters().size() == 1) s.add("$T::$N", beanType, setter.getSimpleName());
+                else s.add("$T::$N", ClassName.get(setter.getEnclosingElement().asType()), setter.getSimpleName());
+                descriptor.metadata().literal(PROPERTY_SETTER, s.build());
+            }
+        }
+    }
+
+    //TODO there are duplicated logic between static processor and here, unify!
+    static class AutoProcessor extends QualifierProcessorServiceProvider {
+        @Override public void processAnnotated(Element element, Metaqualifier meta) {
+            for (AnnotationMirror aMirror : getAnnotatedAnnotations(element, Auto.class)) {
+                String aUCName = aMirror.getAnnotationType().asElement().getSimpleName().toString();
+                String aLCName = UPPER_CAMEL.converterTo(LOWER_CAMEL).convert(aUCName);
+                Map<? extends ExecutableElement, ? extends AnnotationValue> values = aMirror.getElementValues();
+                for (ExecutableElement e : values.keySet()) {
+                    String pLCName = e.getSimpleName().toString();
+                    Extension<Object> extension = Extension.key(aLCName + "." + pLCName);
+                    TypeMirror pRetType = e.getReturnType();
+                    if (pRetType.getKind().isPrimitive()) {
+                        pRetType = types().boxedClass((PrimitiveType) pRetType).asType();
+                    }
+
+                    if (/*isLink*/e.getAnnotation(Link.class) != null && isTypeOf(Class.class, pRetType)) {
+                        DeclaredType declaredType = (DeclaredType) values.get(e).getValue();
+                        String valType = getFlatName((TypeElement) types().asElement(declaredType));
+                        meta.literal(extension, "$T.self", ClassName.bestGuess(getQualifierName(valType)));
+                    } else {
+                        meta.literal(extension, annotationFieldAsCodeBlock(env(), e, values.get(e)));
+                    }
+                }
+            }
+        }
     }
 }
