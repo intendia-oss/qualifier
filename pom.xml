@@ -2,7 +2,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.intendia.qualifier</groupId>
     <artifactId>qualifier-parent</artifactId>
-    <version>0.20</version>
+    <version>HEAD-SNAPSHOT</version>
     <name>Qualifier</name>
     <packaging>pom</packaging>
     <url>https://github.com/intendia-oss/qualifier</url>
