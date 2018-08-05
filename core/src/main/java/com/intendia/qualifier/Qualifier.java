@@ -11,19 +11,15 @@ import javax.annotation.Nullable;
 @FunctionalInterface
 @SuppressWarnings("ClassReferencesSubclass")
 public interface Qualifier<T> extends Metadata {
-    String CORE_NAME_KEY = "core.name";
     String CORE_TYPE_KEY = "core.type";
     String CORE_GENERICS_KEY = "core.generics";
     String CORE_PROPERTIES_KEY = "core.properties";
     String COMPARABLE_COMPARATOR_KEY = "comparable.comparator";
-    Extension<String> CORE_NAME = Extension.key(CORE_NAME_KEY);
     Extension<Class<?>> CORE_TYPE = Extension.key(CORE_TYPE_KEY);
     Extension<Class<?>[]> CORE_GENERICS = Extension.key(CORE_GENERICS_KEY);
     Extension<Collection<? extends PropertyQualifier<?, ?>>> CORE_PROPERTIES = Extension.key(CORE_PROPERTIES_KEY);
     Extension<Comparator<?>> COMPARABLE_COMPARATOR = Extension.key(COMPARABLE_COMPARATOR_KEY);
     Class<?>[] NO_GENERICS = new Class[0];
-
-    default String getName() { return req(CORE_NAME); }
 
     default Class<T> getType() { return req(CORE_TYPE.as()); }
 
@@ -60,16 +56,8 @@ public interface Qualifier<T> extends Metadata {
         return q instanceof Qualifier ? (Qualifier<T>) q : q::data;
     }
 
-    static <T> Qualifier<T> create(Class<T> type) { return create(type, type.getSimpleName()); }
-
-    static <T> Qualifier<T> create(Class<T> type, String name) {
-        return key -> {
-            switch (key) {
-                case CORE_NAME_KEY: return name;
-                case CORE_TYPE_KEY: return type;
-                default: return null;
-            }
-        };
+    static <T> Qualifier<T> create(Class<T> type) {
+        return key -> CORE_TYPE_KEY.equals(key) ? type : null;
     }
 
     @SuppressWarnings("unchecked")

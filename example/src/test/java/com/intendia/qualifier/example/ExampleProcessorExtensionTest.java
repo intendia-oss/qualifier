@@ -52,7 +52,7 @@ public class ExampleProcessorExtensionTest {
     }
 
     @Test public void assert_that_auto_qualifier_values_works() {
-        ExampleAutoQualifier q = ExampleModel__.stringValue;
+        PropertyQualifier<ExampleModel, String> q = ExampleModel__.stringValue;
         assertEquals(SECONDS, q.data("exampleAuto.enumeration"));
         assertEquals(1, q.data("exampleAuto.integer"));
         assertEquals("s", q.data("exampleAuto.string"));
@@ -93,7 +93,7 @@ public class ExampleProcessorExtensionTest {
     @Test public void assert_paths() {
         PropertyQualifier<ExampleModel, ExampleModel> qSelf = PropertyQualifier.asProperty(ExampleModelMetadata);
         assertEquals("", qSelf.getPath());
-        assertEquals("self", qSelf.getName());
+        assertEquals("", qSelf.getName());
 
         PropertyQualifier<ExampleModel, String> qString = ExampleModel__.stringValue;
         assertEquals("stringValue", qString.getPath());

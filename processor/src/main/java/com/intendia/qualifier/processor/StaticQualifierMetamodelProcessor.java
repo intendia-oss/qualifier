@@ -12,11 +12,10 @@ import static com.google.common.base.Strings.isNullOrEmpty;
 import static com.google.common.base.Throwables.getCausalChain;
 import static com.google.common.base.Throwables.getStackTraceAsString;
 import static com.intendia.qualifier.PropertyQualifier.PROPERTY_GETTER;
-import static com.intendia.qualifier.PropertyQualifier.PROPERTY_PATH;
+import static com.intendia.qualifier.PropertyQualifier.PROPERTY_NAME;
 import static com.intendia.qualifier.PropertyQualifier.PROPERTY_SETTER;
 import static com.intendia.qualifier.Qualifier.COMPARABLE_COMPARATOR;
 import static com.intendia.qualifier.Qualifier.CORE_GENERICS;
-import static com.intendia.qualifier.Qualifier.CORE_NAME;
 import static com.intendia.qualifier.Qualifier.CORE_TYPE;
 import static com.intendia.qualifier.processor.Metamodel.SELF;
 import static com.squareup.javapoet.MethodSpec.methodBuilder;
@@ -57,7 +56,6 @@ import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.CodeBlock;
 import com.squareup.javapoet.FieldSpec;
 import com.squareup.javapoet.JavaFile;
-import com.squareup.javapoet.MethodSpec;
 import com.squareup.javapoet.ParameterizedTypeName;
 import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeSpec;
@@ -299,9 +297,9 @@ public class StaticQualifierMetamodelProcessor extends AbstractProcessor impleme
         final Collection<Metamodel> qualifiers = getPropertyDescriptors(beanElement, beanHelper);
 
         // Qualifier Metamodel container (non instantiable)
-        final TypeSpec.Builder container = TypeSpec.classBuilder(metamodelName.simpleName())
+        final TypeSpec.Builder container = TypeSpec.interfaceBuilder(metamodelName.simpleName())
                 .addOriginatingElement(beanElement)
-                .addModifiers(PUBLIC, FINAL)
+                .addModifiers(PUBLIC)
                 .addAnnotation(AnnotationSpec.builder(SuppressWarnings.class)
                         .addMember("value", "$S", "unused")
                         .build())
@@ -312,24 +310,78 @@ public class StaticQualifierMetamodelProcessor extends AbstractProcessor impleme
                                 + getProviders().stream()
                                 .map(e -> e.getClass().getSimpleName())
                                 .collect(joining("\n")))
-                        .build())
-                .addMethod(MethodSpec.constructorBuilder().addModifiers(PRIVATE).build());
+                        .build());
 
         // Bean qualifier extensions
-        getProviders().stream()
-                .filter(QualifierProcessorServiceProvider::processable)
-                .forEach(extension -> extension.processBean(container, beanName, qualifiers));
+        for (QualifierProcessorServiceProvider extension : getProviders()) {
+            if (extension.processable()) extension.processBean(container, beanName, qualifiers);
+        }
 
         // Emit qualifiers for each bean property
         for (Metamodel qualifier : qualifiers) {
-            emitQualifier(beanElement, container, qualifier, metamodelName);
+
+            // Bean ex. ref: person, name: self, type: Person
+            ClassName beanType = ClassName.get(qualifier.beanElement());
+
+            // Property ex. ref: person.address, name: address, type: Address
+            String propertyName = toLower(qualifier.name());
+            TypeName propertyType = TypeName.get(qualifier.propertyType());
+
+            // Property field and class
+
+            // Bean properties
+            if (SELF.equals(qualifier.name())) {
+                qualifier.metadata().literal(Qualifier.CORE_PROPERTIES, "$L", PROPERTIES);
+            }
+
+            // Property context
+            CodeBlock.Builder entries = CodeBlock.builder();
+
+            // Add extensions
+            qualifier.extensions().stream()
+                    .filter(p -> !p.extension().isAnonymous())
+                    .sorted(Comparator.comparing(o -> o.extension().getKey()))
+                    .forEachOrdered(e -> e.valueBlock().ifPresent(block -> {
+                        entries.add("case $S: return $L;\n", e.extension().getKey(), block);
+                    }));
+
+            List<CodeBlock> mixins = qualifier.mixins();
+            if (mixins.size() == 0) entries.add("default: return null;\n");
+            else if (mixins.size() == 1) entries.add("default: return ").add(mixins.get(0)).add(".data(key);\n");
+            else {
+                entries.add("default: Object r = null;$>\n");
+                mixins.forEach(m -> entries.add("if (r == null) r = ").add(m).add(".data(key);\n"));
+                entries.add("return r;$<\n");
+            }
+
+            // PropertyQualifier<Person, Address> address = new PersonAddress();
+            final ParameterizedTypeName baseType = qualifier.isProperty() ?
+                    ParameterizedTypeName.get(ClassName.get(PropertyQualifier.class), beanType, propertyType) :
+                    ParameterizedTypeName.get(ClassName.get(Qualifier.class), propertyType);
+            container.addField(FieldSpec.builder(baseType, propertyName, PUBLIC, STATIC, FINAL)
+                    .initializer(CodeBlock.builder()
+                            .add("new $T() {$>\n", baseType)
+                            .add("public $T data($T key) {$>\n", Object.class, String.class)
+                            .add("switch(key) {$>\n")
+                            .add(entries.build())
+                            .add("$<}\n")
+                            .add("$<}\n")
+                            .add("$<}")
+                            .build())
+                    .build());
+
+            // public final static PersonSelf PersonMetadata = self;
+            if (!qualifier.isProperty()) {
+                final String name = beanType.simpleName() + "Metadata";
+                container.addField(FieldSpec.builder(baseType, name, PUBLIC, STATIC, FINAL).initializer(SELF).build());
+            }
         }
 
         // All qualifiers instance
         {
             final TypeName valueType = qualifierType(beanClassName, WILDCARD);
             final TypeName mapType = ParameterizedTypeName.get(ClassName.get(Collection.class), valueType);
-            container.addType(TypeSpec.classBuilder(PROPERTIES_HOLDER).addModifiers(PRIVATE, STATIC, FINAL)
+            container.addType(TypeSpec.classBuilder(PROPERTIES_HOLDER).addModifiers(PUBLIC, STATIC, FINAL)
                     .addField(FieldSpec.builder(mapType, PROPERTIES_FIELD, PRIVATE, STATIC, FINAL)
                             .initializer("$[$T.<$T>asList($L)$]", Arrays.class, valueType, qualifiers.stream()
                                     .filter(Metamodel::isProperty)
@@ -341,97 +393,6 @@ public class StaticQualifierMetamodelProcessor extends AbstractProcessor impleme
 
         JavaFile.builder(beanHelper.getPackageName(beanElement), container.build()).build()
                 .writeTo(processingEnv.getFiler());
-    }
-
-    private void emitQualifier(TypeElement beanElement, TypeSpec.Builder writer, Metamodel descriptor,
-            ClassName metamodelName) {
-
-        // Bean ex. ref: person, name: self, type: Person
-        ClassName beanType = ClassName.get(descriptor.beanElement());
-
-        // Property ex. ref: person.address, name: address, type: Address
-        String propertyName = toLower(descriptor.name());
-        TypeName propertyType = TypeName.get(descriptor.propertyType());
-
-        // the qualifier representing the property, ex. PersonAddress
-        ClassName qualifierType = metamodelName.nestedClass(beanType.simpleName() + toUpper(propertyName));
-
-        // Property field and class
-
-        final TypeName extendsType = ParameterizedTypeName.get(ClassName.get(Qualifier.class), propertyType);
-
-        // public static final class PersonAddress extends BaseQualifier<Person,Address> {
-        final TypeSpec.Builder qualifier = TypeSpec.classBuilder(qualifierType.simpleName())
-                .addModifiers(PUBLIC, STATIC, FINAL)
-                .addSuperinterface(extendsType);
-
-        getProviders().stream().filter(QualifierProcessorServiceProvider::processable).forEach(extension -> {
-            try {
-                extension.processProperty(qualifier, descriptor);
-            } catch (Throwable e) {
-                print(ERROR, format("Processor %s fail processing property %s.%s, cause: %s\n%s",
-                        extension.getClass().getSimpleName(), beanType.simpleName(), propertyName,
-                        getCausalChain(e).stream()
-                                .map(Throwable::getLocalizedMessage)
-                                .collect(joining(", caused by ")),
-                        getStackTraceAsString(e)), beanElement);
-            }
-        });
-
-        // Bean properties
-        if (SELF.equals(descriptor.name())) {
-            descriptor.metadata().literal(Qualifier.CORE_PROPERTIES, "$L", PROPERTIES);
-        }
-
-        // public static final PersonAddress address = new PersonAddress();
-        writer.addField(FieldSpec.builder(qualifierType, propertyName, PUBLIC, STATIC, FINAL)
-                .initializer("new $T()", qualifierType)
-                .build());
-
-        // public final static PersonSelf PersonMetadata = self;
-        if (!descriptor.isProperty()) {
-            final String metadata = beanType.simpleName() + "Metadata";
-            writer.addField(FieldSpec.builder(qualifierType, metadata, PUBLIC, STATIC, FINAL)
-                    .initializer(SELF)
-                    .build());
-        }
-
-        // Property context
-        CodeBlock.Builder entries = CodeBlock.builder();
-
-        // Add extensions
-        descriptor.extensions().stream()
-                .filter(p -> !p.extension().isAnonymous())
-                .sorted(Comparator.comparing(o -> o.extension().getKey()))
-                .forEachOrdered(e -> {
-                    Optional<CodeBlock> codeBlock = e.valueBlock();
-                    if (codeBlock.isPresent()) {
-                        entries.add("case $S: return ", e.extension().getKey());
-                        entries.add(codeBlock.get());
-                        entries.add(";\n");
-                    }
-                });
-
-        List<CodeBlock> mixins = descriptor.mixins();
-        if (mixins.size() == 0) entries.add("default: return null;\n");
-        else if (mixins.size() == 1) entries.add("default: return ").add(mixins.get(0)).add(".data(key);\n");
-        else {
-            entries.add("default: Object r = null;$>\n");
-            mixins.forEach(m -> entries.add("if (r == null) r = ").add(m).add(".data(key);\n"));
-            entries.add("return r;$<\n");
-        }
-
-        qualifier.addMethod(methodBuilder("data")
-                .addModifiers(PUBLIC)
-                .returns(Object.class)
-                .addParameter(LANG_STRING, "key")
-                .addCode(CodeBlock.builder()
-                        .add("switch(key) {$>\n")
-                        .add(entries.build())
-                        .add("$<}\n").build())
-                .build());
-
-        writer.addType(qualifier.build());
     }
 
     private List<QualifierProcessorServiceProvider> getProviders() {
@@ -922,74 +883,69 @@ public class StaticQualifierMetamodelProcessor extends AbstractProcessor impleme
             annotationApply(el, Qualify.class, a -> stream(a.extend()).forEach(meta::use));
         }
 
-        @Override public void processProperty(Metamodel ctx) {
-            // Property name
-            ctx.metadata().literal(CORE_NAME, "$S", ctx.name());
+        @Override public void processBean(TypeSpec.Builder writer, String beanName, Collection<Metamodel> properties) {
+            for (Metamodel ctx : properties) {
+                // Property name
+                if (ctx.isProperty()) ctx.metadata().literal(PROPERTY_NAME, "$S", ctx.name());
 
-            TypeMirror propertyType = ctx.propertyType();
-            List<? extends TypeMirror> generics = propertyType instanceof DeclaredType
-                    ? ((DeclaredType) propertyType).getTypeArguments() : emptyList();
+                TypeMirror propertyType = ctx.propertyType();
+                List<? extends TypeMirror> generics = propertyType instanceof DeclaredType
+                        ? ((DeclaredType) propertyType).getTypeArguments() : emptyList();
 
-            // Property type
-            ctx.metadata().literal(CORE_TYPE, "$L$T.class",
-                    generics.isEmpty() ? "" : "(Class) ",
-                    TypeName.get(types().erasure(ctx.propertyType())));
+                // Property type
+                ctx.metadata().literal(CORE_TYPE, "$L$T.class",
+                        generics.isEmpty() ? "" : "(Class) ",
+                        TypeName.get(types().erasure(ctx.propertyType())));
 
-            // Property generics
-            if (!generics.isEmpty()) {
-                ctx.metadata().literal(CORE_GENERICS, "new Class<?>[]{$L}", generics.stream()
-                        .map(t -> t.getKind() == TypeKind.WILDCARD ? "null" : t + ".class")
-                        .collect(joining(",")));
+                // Property generics
+                if (!generics.isEmpty()) {
+                    ctx.metadata().literal(CORE_GENERICS, "new Class<?>[]{$L}", generics.stream()
+                            .map(t -> t.getKind() == TypeKind.WILDCARD ? "null" : t + ".class")
+                            .collect(joining(",")));
+                }
+
+                // Property type comparator
+                final TypeMirror comparableType = types().erasure(typeElementFor(Comparable.class).asType());
+                final boolean isComparable = types().isAssignable(ctx.propertyType(), comparableType);
+                if (isComparable) {
+                    ctx.metadata().literal(COMPARABLE_COMPARATOR, "$T.naturalComparator()", Qualifier.class);
+                }
             }
-
-            // Property type comparator
-            final TypeMirror comparableType = types().erasure(typeElementFor(Comparable.class).asType());
-            final boolean isComparable = types().isAssignable(ctx.propertyType(), comparableType);
-            if (isComparable) ctx.metadata().literal(COMPARABLE_COMPARATOR, "$T.naturalComparator()", Qualifier.class);
         }
     }
 
     static class PropertyProcessor extends QualifierProcessorServiceProvider {
 
-        @Override public void processProperty(TypeSpec.Builder writer, Metamodel descriptor) {
-            if (!descriptor.isProperty()) return;
+        @Override public void processBean(TypeSpec.Builder writer, String beanName, Collection<Metamodel> properties) {
+            for (Metamodel ctx : properties) {
+                ClassName beanType = ClassName.get(ctx.beanElement());
+                TypeName propertyType = TypeName.get(ctx.propertyType());
 
-            // Bean ex. ref: person, name: self, type: Person
-            ClassName beanType = ClassName.get(descriptor.beanElement());
-            // Property ex. ref: person.address, name: address, type: Address
-            TypeName propertyType = TypeName.get(descriptor.propertyType());
+                final ExecutableElement getter = ctx.getterElement();
+                final ExecutableElement setter = ctx.setterElement();
+                final VariableElement field = ctx.fieldElement();
+                final boolean fieldReadable = field != null;
+                final boolean fieldWritable = field != null && !field.getModifiers().contains(FINAL);
 
-            // extends PropertyQualifier<BeanT,PropertyT>
-            writer.addSuperinterface(ParameterizedTypeName.get(
-                    ClassName.get(PropertyQualifier.class), beanType, propertyType));
+                // Property getter
+                if (getter != null || fieldReadable) {
+                    CodeBlock.Builder g = CodeBlock.builder();
+                    g.add("($T) ", ParameterizedTypeName.get(ClassName.get(Function.class), beanType, propertyType));
+                    if (getter == null) g.add("t -> t.$N", field.getSimpleName());
+                    else if (getter.getParameters().isEmpty()) g.add("$T::$N", beanType, getter.getSimpleName());
+                    else g.add("$T::$N", ClassName.get(getter.getEnclosingElement().asType()), getter.getSimpleName());
+                    ctx.metadata().literal(PROPERTY_GETTER, g.build());
+                }
 
-            // Property path
-            descriptor.metadata().literal(PROPERTY_PATH, "getName()");
-
-            final ExecutableElement getter = descriptor.getterElement();
-            final ExecutableElement setter = descriptor.setterElement();
-            final VariableElement field = descriptor.fieldElement();
-            final boolean fieldReadable = field != null;
-            final boolean fieldWritable = field != null && !field.getModifiers().contains(FINAL);
-
-            // Property getter
-            if (getter != null || fieldReadable) {
-                CodeBlock.Builder g = CodeBlock.builder();
-                g.add("($T) ", ParameterizedTypeName.get(ClassName.get(Function.class), beanType, propertyType));
-                if (getter == null) g.add("t -> t.$N", field.getSimpleName());
-                else if (getter.getParameters().isEmpty()) g.add("$T::$N", beanType, getter.getSimpleName());
-                else g.add("$T::$N", ClassName.get(getter.getEnclosingElement().asType()), getter.getSimpleName());
-                descriptor.metadata().literal(PROPERTY_GETTER, g.build());
-            }
-
-            // Property setter
-            if (setter != null || fieldWritable) {
-                CodeBlock.Builder s = CodeBlock.builder();
-                s.add("($T) ", ParameterizedTypeName.get(ClassName.get(BiConsumer.class), beanType, propertyType));
-                if (setter == null) s.add("(t, v) -> t.$N = v", field.getSimpleName());
-                else if (setter.getParameters().size() == 1) s.add("$T::$N", beanType, setter.getSimpleName());
-                else s.add("$T::$N", ClassName.get(setter.getEnclosingElement().asType()), setter.getSimpleName());
-                descriptor.metadata().literal(PROPERTY_SETTER, s.build());
+                // Property setter
+                if (setter != null || fieldWritable) {
+                    CodeBlock.Builder s = CodeBlock.builder();
+                    s.add("($T) ", ParameterizedTypeName.get(ClassName.get(BiConsumer.class), beanType, propertyType));
+                    if (setter == null) s.add("(t, v) -> t.$N = v", field.getSimpleName());
+                    else if (setter.getParameters().size() == 1) s.add("$T::$N", beanType, setter.getSimpleName());
+                    else s.add("$T::$N", ClassName.get(setter.getEnclosingElement().asType()), setter.getSimpleName());
+                    ctx.metadata().literal(PROPERTY_SETTER, s.build());
+                }
             }
         }
     }

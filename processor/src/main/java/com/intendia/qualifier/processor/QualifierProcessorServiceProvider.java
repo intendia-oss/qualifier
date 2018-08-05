@@ -28,8 +28,10 @@ public abstract class QualifierProcessorServiceProvider {
         this.initialized = true;
     }
 
+    /** If this method return false this processor won't be evaluated. */
     public boolean processable() { return true; }
 
+    /** First phase, used to gather per-qualifier metadata. */
     public void processAnnotated(Element element, Metaqualifier meta) {}
 
     /**
@@ -38,15 +40,6 @@ public abstract class QualifierProcessorServiceProvider {
      * @param properties list of properties of Person and itself as self (ex. name, address, self)
      */
     public void processBean(TypeSpec.Builder writer, String beanName, Collection<Metamodel> properties) {}
-
-    /**
-     * @param writer property qualifier type spec (ex. some.Person__.PersonName)
-     * @param descriptor property metadata access and mutators
-     * @deprecated use {@link #processProperty(Metamodel)} instead
-     */
-    public void processProperty(TypeSpec.Builder writer, Metamodel descriptor) { processProperty(descriptor); }
-
-    public void processProperty(Metamodel descriptor) {}
 
     // Context
 

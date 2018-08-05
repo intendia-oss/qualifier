@@ -16,12 +16,12 @@ public interface Metamodel {
 
     String name();
 
+    /** Bean ex. ref: person, name: self, type: Person */
     DeclaredType beanType();
-
     TypeElement beanElement();
 
+    /** Property ex. ref: person.address, name: address, type: Address */
     TypeMirror propertyType();
-
     @Nullable TypeElement propertyElement();
 
     @Nullable ExecutableElement getterElement();

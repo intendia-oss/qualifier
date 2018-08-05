@@ -16,16 +16,20 @@ import javax.annotation.Nullable;
  */
 @FunctionalInterface
 public interface PropertyQualifier<T, V> extends Qualifier<V> {
+    String PROPERTY_NAME_KEY = "property.name";
     String PROPERTY_PATH_KEY = "property.path";
     String PROPERTY_GETTER_KEY = "property.getter";
     String PROPERTY_SETTER_KEY = "property.setter";
     String PROPERTY_COMPARATOR_KEY = "property.comparator";
+    Extension<String> PROPERTY_NAME = Extension.key(PROPERTY_NAME_KEY);
     Extension<String> PROPERTY_PATH = Extension.key(PROPERTY_PATH_KEY);
     Extension<Function<?, ?>> PROPERTY_GETTER = Extension.key(PROPERTY_GETTER_KEY);
     Extension<BiConsumer<?, ?>> PROPERTY_SETTER = Extension.key(PROPERTY_SETTER_KEY);
     Extension<Comparator<?>> PROPERTY_COMPARATOR = Extension.key(PROPERTY_COMPARATOR_KEY);
 
-    default String getPath() { return data(PROPERTY_PATH, ""); }
+    default String getName() { return data(PROPERTY_NAME, ""); }
+    
+    default String getPath() { return data(PROPERTY_PATH, (Supplier<String>) this::getName); }
 
     /** @throws RuntimeException if not {@link #isReadable()} */
     default Function<T, V> getGetter() { return req(PROPERTY_GETTER.as()); }
@@ -134,7 +138,7 @@ class CompositionPropertyQualifier<X, Y, Z> implements PropertyQualifier<X, Z> {
 
     @Override public @Nullable Object data(@Nonnull String key) {
         switch (key) {
-            case CORE_NAME_KEY: return getName();
+            case PROPERTY_NAME_KEY: return getName();
             case CORE_TYPE_KEY: return getType();
             case CORE_GENERICS_KEY: return getGenerics();
             case PROPERTY_PATH_KEY: return getPath();
