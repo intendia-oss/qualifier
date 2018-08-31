@@ -1,7 +1,6 @@
 package com.intendia.qualifier.processor;
 
 import static com.google.testing.compile.JavaSourcesSubject.assertThat;
-import static com.intendia.qualifier.processor.ProcessorTestUtils.qualifierProcessors;
 
 import com.google.testing.compile.JavaFileObjects;
 import javax.tools.JavaFileObject;
@@ -28,6 +27,8 @@ public class StaticQualifierMetamodelProcessorTest {
                 + "\n"
                 + "    void setInteger(Integer integer);\n"
                 + "}");
-        assertThat(model, child).processedWith(qualifierProcessors()).compilesWithoutError();
+        assertThat(model, child)
+                .processedWith(new StaticQualifierMetamodelProcessor())
+                .compilesWithoutError();
     }
 }
