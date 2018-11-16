@@ -47,7 +47,8 @@ that extract the metadata using reflection, this is a super nice solution and yo
 work for you. So, what does this lib. This lib defines a High-Level API (and kind of best-practices) to extract and use
 this metadata so both metadata extractor and metadata consumer can be developed independently and shared.
 
-This lib will generate a metamodel, and this typed metamodel is called `Qualifier`. For example, person will generate:
+This lib will generate a metamodel, and this typed metamodel is called `Qualifier`. For example, person will generate
+a `Person_Metadata` with each property as a static field like `Person_Metadata.fullName`:
 ```java
 TableBuilder<Person> table = TableBuilder.builder()
     .column(Person_Metadata.fullName)
@@ -59,9 +60,32 @@ FormBuilder<Person> form = FormBuilder.builder()
     .entry(Person_Metadata.lastName)    
     .entry(Person_Metadata.weight)
     .build();
-```
-You can even do this for all properties…
+```  
+And the `column` method looks like:
+```java
+public <T> TableBuilder<Person> column(PropertyQualifier<Person, T> property) {
+    Function<T, String> propertyRender = property.getTextRender();
+    Function<Person, T> propertyGetter = property.getGetter();
+    return column(property.getSummary(), propertyGetter.andThen(propertyRender));
+}
+````
+I.e. the qualifier is a metadata container, and you can create your factories and builders around this idea. Extending
+it is super easy, `getTextRender` is itself an extension, and you should define the one you will need in your builders.
+
+There are a special static field that represent the type itself, for the `Person` example it is called 
+`Person_Metadata.PersonMetamodel` (thought to be used with static imports). So you can generate a bulk editor for all
+`Person` properties using:
 ```java
 TableBuilder<Person> table = TableBuilder.bulk(PersonMetamodel);
 FormBuilder<Person> form = FormBuilder.bulk(PersonMetamodel);
 ```
+And build will look like:
+```java
+public static <T> TableBuilder<T> bulk(Qualifier<Person> bean) {
+    TableBuilder<T> builder = TableBuilder.build();
+    bean.getProperties().forEach(builder::column);
+    return builder;  
+} 
+```
+
+And this is it, qualifiers. The metadata sharing library.
