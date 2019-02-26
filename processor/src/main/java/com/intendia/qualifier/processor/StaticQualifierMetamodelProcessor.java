@@ -35,6 +35,7 @@ import static javax.lang.model.element.Modifier.STATIC;
 import static javax.tools.Diagnostic.Kind.ERROR;
 import static javax.tools.Diagnostic.Kind.NOTE;
 
+import com.google.auto.common.GeneratedAnnotationSpecs;
 import com.google.auto.common.MoreElements;
 import com.google.auto.common.MoreTypes;
 import com.google.common.base.CaseFormat;
@@ -62,7 +63,6 @@ import com.squareup.javapoet.TypeSpec;
 import com.squareup.javapoet.WildcardTypeName;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -80,7 +80,6 @@ import java.util.Set;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
 import java.util.stream.Stream;
-import javax.annotation.Generated;
 import javax.annotation.Nullable;
 import javax.annotation.processing.AbstractProcessor;
 import javax.annotation.processing.ProcessingEnvironment;
@@ -301,16 +300,12 @@ public class StaticQualifierMetamodelProcessor extends AbstractProcessor impleme
                 .addOriginatingElement(beanElement)
                 .addModifiers(PUBLIC)
                 .addAnnotation(AnnotationSpec.builder(SuppressWarnings.class)
-                        .addMember("value", "$S", "unused")
-                        .build())
-                .addAnnotation(AnnotationSpec.builder(Generated.class)
-                        .addMember("value", "$S", ClassName.get(StaticQualifierMetamodelProcessor.class))
-                        .addMember("date", "$S", Instant.now())
-                        .addMember("comments", "$S", "Enabled processor providers (" + getProviders().size() + "):\n"
-                                + getProviders().stream()
-                                .map(e -> e.getClass().getSimpleName())
-                                .collect(joining("\n")))
-                        .build());
+                        .addMember("value", "$S", "unused").build());
+
+        String extensionsMsg = getProviders().stream().map(e -> e.getClass().getSimpleName()).collect(joining("\n"));
+        GeneratedAnnotationSpecs.generatedAnnotationSpec(elements(), processingEnv.getSourceVersion(), getClass(),
+                "Enabled processor providers (" + getProviders().size() + "):\n" + extensionsMsg)
+                .ifPresent(container::addAnnotation);
 
         // Bean qualifier extensions
         for (QualifierProcessorServiceProvider extension : getProviders()) {
