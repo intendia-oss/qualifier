@@ -6,7 +6,7 @@ import com.intendia.qualifier.annotation.Qualify.Entry;
 @Qualify
 public interface ExampleMixin {
 
-    @Qualify(extend = @Entry(key = "mixin.val", type = String.class, value = "mixin"))
+    @Qualify(extend = @Entry(key = "mixin.val", value = "mixin"))
     Object getStringValue();
 
     Object getStringListValue();

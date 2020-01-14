@@ -5,7 +5,6 @@ import java.util.Objects;
 public interface Extension<T> {
     String getKey();
 
-    /** Always false at run time. */
     default boolean isAnonymous() { return false; }
 
     @SuppressWarnings("unchecked")
@@ -35,7 +34,7 @@ class NamedExtension<T> implements Extension<T> {
 }
 
 class AnonymousExtension<T> implements Extension<T> {
-    @Override public String getKey() { throw new UnsupportedOperationException("processing time extension"); }
+    @Override public String getKey() { throw new UnsupportedOperationException("anonymous extension"); }
 
     @Override public boolean isAnonymous() { return true; }
 }

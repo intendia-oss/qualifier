@@ -66,15 +66,15 @@
         <dependencies><!-- @formatter:off -->
             <dependency><groupId>com.intendia.qualifier</groupId><artifactId>qualifier</artifactId><version>${project.version}</version></dependency>
             <dependency><groupId>com.intendia.qualifier</groupId><artifactId>qualifier-processor</artifactId><version>${project.version}</version></dependency>
-            <dependency><groupId>com.squareup</groupId><artifactId>javapoet</artifactId><version>1.11.1</version></dependency>
-            <dependency><groupId>com.google.guava</groupId><artifactId>guava</artifactId><version>26.0-jre</version></dependency>
+            <dependency><groupId>com.squareup</groupId><artifactId>javapoet</artifactId><version>1.12.0</version></dependency>
+            <dependency><groupId>com.google.guava</groupId><artifactId>guava</artifactId><version>28.2-jre</version></dependency>
             <dependency><groupId>com.google.code.findbugs</groupId><artifactId>jsr305</artifactId><version>3.0.2</version></dependency>
             <dependency><groupId>com.google.auto</groupId><artifactId>auto-common</artifactId><version>0.10</version></dependency>
             <!-- Tests -->
-            <dependency><groupId>org.mockito</groupId><artifactId>mockito-core</artifactId><version>2.21.0</version><scope>test</scope></dependency>
             <dependency><groupId>ch.qos.logback</groupId><artifactId>logback-classic</artifactId><version>1.2.3</version><scope>test</scope></dependency>
             <dependency><groupId>com.google.testing.compile</groupId><artifactId>compile-testing</artifactId><version>0.15</version><scope>test</scope></dependency>
             <dependency><groupId>junit</groupId><artifactId>junit</artifactId><version>4.12</version><scope>test</scope></dependency>
+            <dependency><groupId>org.mockito</groupId><artifactId>mockito-core</artifactId><version>2.21.0</version><scope>test</scope></dependency>
         </dependencies><!-- @formatter:on -->
     </dependencyManagement>
 

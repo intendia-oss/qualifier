@@ -12,7 +12,7 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 @Qualify(mixin = ExampleMixin.class, extend = {
-        @Entry(key = "extension.string", type = String.class, value = "string value"),
+        @Entry(key = "extension.string", value = "string value"),
         @Entry(key = "extension.boolean", type = Boolean.class, value = "true"),
         @Entry(key = "extension.int", type = Integer.class, value = "1"),
         @Entry(key = "extension.enum", type = TimeUnit.class, value = "SECONDS"),
@@ -31,6 +31,7 @@ public interface ExampleModel {
 
     Color getColorValue();
 
+    @Qualify.Extend(ManualMixin.class)
     int[] getIntArray();
 
     Integer[] getIntegerArray();

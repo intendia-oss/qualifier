@@ -25,11 +25,11 @@ public interface Metadata {
     }
 
     default <T> T data(Extension<T> key, T or) {
-        T v = data(key); return v != null ? v : or;
+        T t = data(key); return t != null ? t : or;
     }
 
     default <T> T data(Extension<T> key, Supplier<T> or) {
-        T v = data(key); return v != null ? v : or.get();
+        T t = data(key); return t != null ? t : or.get();
     }
 
     default <T> Optional<T> opt(Extension<T> key) {
@@ -37,7 +37,9 @@ public interface Metadata {
     }
 
     default <T> T req(Extension<T> key) {
-        return requireNonNull(data(key), key + " missing");
+        T t = data(key);
+        if (t == null) throw new NullPointerException(key + " missing");
+        return t;
     }
 
     /** Return the nearest mutable metadata or throws NPE if no mutable column exists. */
@@ -46,9 +48,7 @@ public interface Metadata {
     }
 
     /** Creates a new mutable metadata to allow overrides values on this metadata. */
-    default Mutadata override() {
-        return new HashMutadata(this);
-    }
+    default Mutadata override() { return create(this);}
 
     default Metadata override(Consumer<Mutadata> fn) {
         Mutadata m = override(); fn.accept(m); return m;
@@ -58,9 +58,9 @@ public interface Metadata {
         return cast.apply(ref.override());
     }
 
-    static Mutadata create() {
-        return new HashMutadata(null);
-    }
+    static Mutadata create() { return create(null);}
+
+    static Mutadata create(@Nullable Metadata parent) { return new HashMutadata(parent);}
 
     interface Mutadata extends Metadata {
 

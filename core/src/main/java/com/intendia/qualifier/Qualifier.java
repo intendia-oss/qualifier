@@ -57,7 +57,9 @@ public interface Qualifier<T> extends Metadata {
     }
 
     static <T> Qualifier<T> create(Class<T> type) {
-        return key -> CORE_TYPE_KEY.equals(key) ? type : null;
+        HashQualifier<T> out = new HashQualifier<>(null);
+        out.put(CORE_TYPE, type);
+        return out;
     }
 
     @SuppressWarnings("unchecked")
@@ -69,6 +71,10 @@ public interface Qualifier<T> extends Metadata {
     static <T> Comparator<T> toStringComparator() {
         return (Comparator<T>) Defaults.TO_STRING_COMPARATOR;
     }
+}
+
+class HashQualifier<T> extends HashMutadata implements Qualifier<T> {
+    HashQualifier(@Nullable Metadata parent) { super(parent); }
 }
 
 final class Defaults {

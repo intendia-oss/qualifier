@@ -292,7 +292,7 @@ public class StaticQualifierMetamodelProcessor extends AbstractProcessor impleme
         // 'Class' refer full qualified name, 'Name' refer to simple class name
         final String beanName = beanElement.getSimpleName().toString();
         final ClassName beanClassName = ClassName.get(beanElement);
-        final ClassName metamodelName = ClassName.bestGuess(getQualifierName(getFlatName(beanElement)));
+        final ClassName metamodelName = getQualifierName(beanElement);
         final Collection<Metamodel> qualifiers = getPropertyDescriptors(beanElement, beanHelper);
 
         // Qualifier Metamodel container (non instantiable)
@@ -550,7 +550,7 @@ public class StaticQualifierMetamodelProcessor extends AbstractProcessor impleme
                 if (mixinMetamodel != null) print(Kind.ERROR, "multiple mixin definitions", element);
                 TypeElement mixin = qualifyExtendValue(extend);
                 if (!mixin.equals(typeElementFor(Object.class))) {
-                    mixinMetamodel = ClassName.bestGuess(getQualifierName(getFlatName(mixin)));
+                    mixinMetamodel = getQualifierName(mixin);
                 }
                 mixinProperty = extend.name().isEmpty() ? name : extend.name();
             }
@@ -599,7 +599,7 @@ public class StaticQualifierMetamodelProcessor extends AbstractProcessor impleme
                 TypeElement classRepresenter = qualifyExtendValue(beanQualify);
                 if (classRepresenter != null && !classRepresenter.equals(typeElementFor(Object.class))) {
                     return new PropertyReference(
-                            ClassName.bestGuess(getQualifierName(getFlatName(classRepresenter))),
+                            getQualifierName(classRepresenter),
                             isNullOrEmpty(mixinProperty) ? name : mixinProperty);
                 }
             }
@@ -622,7 +622,7 @@ public class StaticQualifierMetamodelProcessor extends AbstractProcessor impleme
             Optional.ofNullable(propertyElement())
                     .filter(o -> isProperty()) // skip self
                     .filter(o -> o.getAnnotation(Qualify.class) != null)
-                    .map(o -> ClassName.bestGuess(getQualifierName(getFlatName(o))))
+                    .map(o -> getQualifierName(o))
                     .ifPresent(t -> mixins.add(CodeBlock.of("$T.$L", t, SELF)));
 
             return mixins;
@@ -854,16 +854,14 @@ public class StaticQualifierMetamodelProcessor extends AbstractProcessor impleme
         return MoreTypes.isTypeOf(Enum.class, MoreElements.asType(MoreTypes.asElement(type)).getSuperclass());
     }
 
-    public static String getFlatName(TypeElement classRepresenter) {
-        if (classRepresenter.getNestingKind() == NestingKind.MEMBER) {
-            return classRepresenter.getEnclosingElement() + "" + classRepresenter.getSimpleName().toString();
+    public static ClassName getQualifierName(TypeElement type) {
+        if (type.getNestingKind() == NestingKind.MEMBER) {
+            return ClassName.bestGuess(type.getEnclosingElement() + "" + type.getSimpleName() + "__");
         } else {
-            return classRepresenter.getQualifiedName().toString();
+            // if the type is not annotated, then point to the type itself
+            if (type.getAnnotation(Qualify.class) == null) return ClassName.get(type);
+            else return ClassName.bestGuess(type.getQualifiedName() + "__");
         }
-    }
-
-    public static String getQualifierName(String flatName) {
-        return flatName + "__";
     }
 
     static TypeElement typeElementFor(ProcessingEnvironment env, Class<?> clazz) {
@@ -962,8 +960,8 @@ public class StaticQualifierMetamodelProcessor extends AbstractProcessor impleme
 
                     if (/*isLink*/e.getAnnotation(Link.class) != null && isTypeOf(Class.class, pRetType)) {
                         DeclaredType declaredType = (DeclaredType) values.get(e).getValue();
-                        String valType = getFlatName((TypeElement) types().asElement(declaredType));
-                        meta.literal(extension, "$T.self", ClassName.bestGuess(getQualifierName(valType)));
+                        meta.literal(extension, "$T.self",
+                                getQualifierName((TypeElement) types().asElement(declaredType)));
                     } else {
                         meta.literal(extension, annotationFieldAsCodeBlock(env(), e, values.get(e)));
                     }
