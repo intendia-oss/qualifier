@@ -1,6 +1,6 @@
 # Qualifier: The metadata sharing library 
 
-[![Maven Central](https://maven-badges.herokuapp.com/maven-central/com.intendia.qualifier/qualifier-parent/badge.svg)](https://maven-badges.herokuapp.com/maven-central/com.intendia.gwt.rxgwt/rxgwt-parent)
+[![Maven Central](https://maven-badges.herokuapp.com/maven-central/com.intendia.qualifier/qualifier-parent/badge.svg)](https://maven-badges.herokuapp.com/maven-central/com.intendia.qualifier/qualifier-parent)
 [![Build Status](https://travis-ci.org/intendia-oss/qualifier.svg)](https://travis-ci.org/intendia-oss/qualifier) 
 [![Join the chat at https://gitter.im/intendia-oss/qualifier](https://badges.gitter.im/intendia-oss/qualifier.svg)](https://gitter.im/intendia-oss/qualifier?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
