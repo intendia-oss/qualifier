@@ -3,8 +3,9 @@
     <groupId>com.intendia.qualifier</groupId>
     <artifactId>qualifier-parent</artifactId>
     <version>HEAD-SNAPSHOT</version>
-    <name>Qualifier</name>
     <packaging>pom</packaging>
+    <name>Qualifier</name>
+    <description>The metadata sharing library.</description>
     <url>https://github.com/intendia-oss/qualifier</url>
 
     <inceptionYear>2014</inceptionYear>
@@ -33,10 +34,6 @@
         <system>GitHub</system>
         <url>https://github.com/intendia-oss/qualifier/issues</url>
     </issueManagement>
-
-    <prerequisites>
-        <maven>3</maven>
-    </prerequisites>
 
     <distributionManagement>
         <snapshotRepository>
@@ -84,7 +81,7 @@
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-compiler-plugin</artifactId>
-                    <version>3.8.0</version>
+                    <version>3.8.1</version>
                 </plugin>
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
@@ -109,7 +106,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-source-plugin</artifactId>
-                <version>3.0.1</version>
+                <version>3.2.1</version>
                 <executions>
                     <execution>
                         <id>attach-sources</id>
@@ -130,7 +127,7 @@
                     <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-javadoc-plugin</artifactId>
-                        <version>3.1.0</version>
+                        <version>3.1.1</version>
                         <executions>
                             <execution>
                                 <id>attach-javadocs</id>
