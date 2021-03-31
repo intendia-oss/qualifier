@@ -64,7 +64,7 @@
             <dependency><groupId>com.intendia.qualifier</groupId><artifactId>qualifier</artifactId><version>${project.version}</version></dependency>
             <dependency><groupId>com.intendia.qualifier</groupId><artifactId>qualifier-processor</artifactId><version>${project.version}</version></dependency>
             <dependency><groupId>com.squareup</groupId><artifactId>javapoet</artifactId><version>1.12.0</version></dependency>
-            <dependency><groupId>com.google.guava</groupId><artifactId>guava</artifactId><version>28.2-jre</version></dependency>
+            <dependency><groupId>com.google.guava</groupId><artifactId>guava</artifactId><version>29.0-jre</version></dependency>
             <dependency><groupId>com.google.code.findbugs</groupId><artifactId>jsr305</artifactId><version>3.0.2</version></dependency>
             <dependency><groupId>com.google.auto</groupId><artifactId>auto-common</artifactId><version>0.10</version></dependency>
             <!-- Tests -->
